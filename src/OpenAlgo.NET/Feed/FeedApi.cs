@@ -59,7 +59,7 @@ public class DepthLevel
 /// <summary>
 /// Market data feed API methods for OpenAlgo using WebSockets.
 /// </summary>
-public abstract class FeedApi : Telegram.TelegramApi
+public abstract class FeedApi : Utilities.UtilitiesApi
 {
     private ClientWebSocket? _webSocket;
     private CancellationTokenSource? _cancellationTokenSource;

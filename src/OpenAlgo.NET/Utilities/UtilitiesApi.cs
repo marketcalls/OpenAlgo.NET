@@ -1,6 +1,6 @@
 using OpenAlgo.NET.Models.Responses;
 
-namespace OpenAlgo.NET.Telegram;
+namespace OpenAlgo.NET.Utilities;
 
 /// <summary>
 /// Response for telegram operations.
@@ -10,14 +10,14 @@ public class TelegramResponse : BaseResponse
 }
 
 /// <summary>
-/// Telegram notification API methods for OpenAlgo.
+/// Utilities API methods for OpenAlgo including Telegram, Market Timings, and Holidays.
 /// </summary>
-public abstract class TelegramApi : Options.OptionsApi
+public abstract class UtilitiesApi : Options.OptionsApi
 {
     /// <summary>
-    /// Initializes a new instance of the TelegramApi class.
+    /// Initializes a new instance of the UtilitiesApi class.
     /// </summary>
-    protected TelegramApi(string apiKey, string host = "http://127.0.0.1:5000", string version = "v1", double timeout = 120.0)
+    protected UtilitiesApi(string apiKey, string host = "http://127.0.0.1:5000", string version = "v1", double timeout = 120.0)
         : base(apiKey, host, version, timeout)
     {
     }
@@ -64,6 +64,62 @@ public abstract class TelegramApi : Options.OptionsApi
     public TelegramResponse Telegram(string username, string message, int priority = 5)
     {
         return TelegramAsync(username, message, priority).GetAwaiter().GetResult();
+    }
+
+    #endregion
+
+    #region Holidays
+
+    /// <summary>
+    /// Get trading holidays for a year (async).
+    /// </summary>
+    /// <param name="year">Year to get holidays for. Required.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>Holidays response.</returns>
+    public async Task<HolidaysResponse> HolidaysAsync(
+        int year,
+        CancellationToken cancellationToken = default)
+    {
+        var payload = CreatePayload();
+        payload["year"] = year;
+
+        return await MakeRequestAsync<HolidaysResponse>("market/holidays", payload, cancellationToken);
+    }
+
+    /// <summary>
+    /// Get trading holidays for a year (sync).
+    /// </summary>
+    public HolidaysResponse Holidays(int year)
+    {
+        return HolidaysAsync(year).GetAwaiter().GetResult();
+    }
+
+    #endregion
+
+    #region Timings
+
+    /// <summary>
+    /// Get exchange timings for a date (async).
+    /// </summary>
+    /// <param name="date">Date in YYYY-MM-DD format. Required.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>Timings response.</returns>
+    public async Task<TimingsResponse> TimingsAsync(
+        string date,
+        CancellationToken cancellationToken = default)
+    {
+        var payload = CreatePayload();
+        payload["date"] = date;
+
+        return await MakeRequestAsync<TimingsResponse>("market/timings", payload, cancellationToken);
+    }
+
+    /// <summary>
+    /// Get exchange timings for a date (sync).
+    /// </summary>
+    public TimingsResponse Timings(string date)
+    {
+        return TimingsAsync(date).GetAwaiter().GetResult();
     }
 
     #endregion
