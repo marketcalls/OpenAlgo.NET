@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>net6.0;net7.0;net8.0</TargetFrameworks>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+
+    <!-- NuGet Package Configuration -->
+    <PackageId>OpenAlgo.NET</PackageId>
+    <Version>1.0.0</Version>
+    <Authors>OpenAlgo</Authors>
+    <Company>OpenAlgo</Company>
+    <Description>OpenAlgo .NET SDK for algorithmic trading - C# client library for OpenAlgo API. Supports order placement, market data, options trading, and real-time WebSocket streaming.</Description>
+    <PackageTags>trading;algo;openalgo;stocks;options;nse;bse;nfo;algorithmic-trading;market-data</PackageTags>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <RepositoryType>git</RepositoryType>
+
+    <!-- Documentation -->
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <DocumentationFile>bin\$(Configuration)\$(TargetFramework)\OpenAlgo.NET.xml</DocumentationFile>
+
+    <!-- Assembly Info -->
+    <AssemblyName>OpenAlgo.NET</AssemblyName>
+    <RootNamespace>OpenAlgo.NET</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="..\..\README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
+
+</Project>
