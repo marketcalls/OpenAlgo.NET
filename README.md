@@ -1,14 +1,18 @@
 # OpenAlgo.NET
 
-Official .NET SDK for OpenAlgo - Algorithmic Trading Platform for Indian Markets.
+OpenAlgo.NET SDK for algorithmic trading - C# client for OpenAlgo API
 
 ## Installation
 
-```bash
-# .NET CLI
-dotnet add package OpenAlgo.NET
+To install the OpenAlgo.NET library, use NuGet:
 
-# Package Manager
+```bash
+dotnet add package OpenAlgo.NET
+```
+
+Or via Package Manager:
+
+```powershell
 Install-Package OpenAlgo.NET
 ```
 
@@ -20,76 +24,63 @@ Install-Package OpenAlgo.NET
 | .NET | 7.0 | STS (Standard Term Support) |
 | .NET | 8.0 | LTS (Long Term Support) - Recommended |
 
-The SDK is built using only built-in .NET libraries with no external dependencies:
-- `System.Net.Http` - HTTP client
-- `System.Text.Json` - JSON serialization
-- `System.Net.WebSockets.Client` - WebSocket streaming
+The SDK is built using only built-in .NET libraries with no external dependencies.
 
-## Version
+## Get the OpenAlgo apikey
 
-```csharp
-// Current Version: 1.0.0
-```
+Make Sure that your OpenAlgo Application is running. Login to OpenAlgo Application with valid credentials and get the OpenAlgo apikey
 
-## Getting Started
+For detailed function parameters refer to the [API Documentation](https://docs.openalgo.in/api-documentation/v1)
 
-First, import the OpenAlgo namespace and initialize the client with your API key:
+## Getting Started with OpenAlgo.NET
+
+First, import the `Api` class from the OpenAlgo.NET library and initialize it with your API key:
 
 ```csharp
 using OpenAlgo.NET;
 
-// Replace with your actual API key
-// Specify the host URL with your hosted domain or ngrok domain
-// If running locally in Windows then use the default host value
+// Replace 'your_api_key_here' with your actual API key
+// Specify the host URL with your hosted domain or ngrok domain.
+// If running locally in windows then use the default host value.
 var client = new Api(apiKey: "your_api_key_here", host: "http://127.0.0.1:5000");
 ```
 
-### Constructor Parameters
+## Examples
 
-```csharp
-var client = new Api(
-    apiKey: "your_api_key",           // Required - OpenAlgo API key
-    host: "http://127.0.0.1:5000",    // Optional - API host URL
-    version: "v1",                     // Optional - API version
-    timeout: 120.0,                    // Optional - Request timeout in seconds
-    wsPort: 8765,                      // Optional - WebSocket port
-    wsUrl: null,                       // Optional - Custom WebSocket URL
-    verbose: 0                         // Optional - Verbosity (0=silent, 1=basic, 2=debug)
-);
-```
+Please refer to the documentation on [order constants](https://docs.openalgo.in/api-documentation/v1/order-constants), and consult the API reference for details on optional parameters
 
 ---
 
-# Async API Reference
+# Sync API Reference
 
-All methods are available in async versions with the `Async` suffix. Async methods are recommended for better performance and scalability.
+## PlaceOrder example
 
-## PlaceOrderAsync
-
-Place an order with the given parameters.
+To place a new market order:
 
 ```csharp
-var response = await client.PlaceOrderAsync(
+var response = client.PlaceOrder(
+    strategy: "Python",
     symbol: "NHPC",
     action: "BUY",
     exchange: "NSE",
-    strategy: "CSharp",           // Optional, default: "Python"
-    priceType: "MARKET",          // Optional, default: "MARKET"
-    product: "MIS",               // Optional, default: "MIS"
-    quantity: 1                   // Optional, default: 1
+    priceType: "MARKET",
+    product: "MIS",
+    quantity: 1
 );
-Console.WriteLine($"Order ID: {response.OrderId}, Status: {response.Status}");
+Console.WriteLine(response);
 ```
 
-**Response:**
+Place Market Order Response
+
 ```json
 {"orderid": "250408000989443", "status": "success"}
 ```
 
-### Limit Order Example
+To place a new limit order:
 
 ```csharp
-var response = await client.PlaceOrderAsync(
+var response = client.PlaceOrder(
+    strategy: "Python",
     symbol: "YESBANK",
     action: "BUY",
     exchange: "NSE",
@@ -100,34 +91,22 @@ var response = await client.PlaceOrderAsync(
     triggerPrice: "0",
     disclosedQuantity: "0"
 );
+Console.WriteLine(response);
 ```
 
-### PlaceOrderAsync Parameters
+Place Limit Order Response
 
-| Parameter | Type | Required | Default | Description |
-|-----------|------|----------|---------|-------------|
-| symbol | string | Yes | - | Trading symbol |
-| action | string | Yes | - | BUY or SELL |
-| exchange | string | Yes | - | Exchange code (NSE, BSE, NFO, etc.) |
-| strategy | string | No | "Python" | Strategy name |
-| priceType | string | No | "MARKET" | MARKET, LIMIT, SL, SL-M |
-| product | string | No | "MIS" | MIS, NRML, CNC |
-| quantity | int | No | 1 | Quantity to trade |
-| price | string | No | null | Required for LIMIT orders |
-| triggerPrice | string | No | null | Required for SL/SL-M orders |
-| disclosedQuantity | string | No | null | Disclosed quantity |
-| target | string | No | null | Target price |
-| stoploss | string | No | null | Stoploss price |
-| trailingSl | string | No | null | Trailing stoploss points |
+```json
+{"orderid": "250408001003813", "status": "success"}
+```
 
----
+## PlaceSmartOrder Example
 
-## PlaceSmartOrderAsync
-
-Place a smart order considering the current position size.
+To place a smart order considering the current position size:
 
 ```csharp
-var response = await client.PlaceSmartOrderAsync(
+var response = client.PlaceSmartOrder(
+    strategy: "Python",
     symbol: "TATAMOTORS",
     action: "SELL",
     exchange: "NSE",
@@ -136,36 +115,38 @@ var response = await client.PlaceSmartOrderAsync(
     quantity: 1,
     positionSize: 5
 );
+Console.WriteLine(response);
 ```
 
-**Response:**
+Place Smart Market Order Response
+
 ```json
 {"orderid": "250408000997543", "status": "success"}
 ```
 
----
+## OptionsOrder Example
 
-## OptionsOrderAsync
-
-Place ATM/ITM/OTM options orders.
+To place ATM options order
 
 ```csharp
-// ATM Option Order
-var response = await client.OptionsOrderAsync(
+var response = client.OptionsOrder(
+    strategy: "python",
     underlying: "NIFTY",
-    exchange: "NFO",
+    exchange: "NSE_INDEX",
+    expiryDate: "28OCT25",
     offset: "ATM",
     optionType: "CE",
     action: "BUY",
     quantity: 75,
-    strategy: "CSharp",
-    expiryDate: "28OCT25",
     priceType: "MARKET",
-    product: "NRML"
+    product: "NRML",
+    splitSize: 0
 );
+Console.WriteLine(response);
 ```
 
-**Response:**
+Place Options Order Response
+
 ```json
 {
   "exchange": "NFO",
@@ -179,174 +160,252 @@ var response = await client.OptionsOrderAsync(
 }
 ```
 
-### ITM Option Order
+To place ITM options order
 
 ```csharp
-var response = await client.OptionsOrderAsync(
+var response = client.OptionsOrder(
+    strategy: "python",
     underlying: "NIFTY",
-    exchange: "NFO",
+    exchange: "NSE_INDEX",
+    expiryDate: "28OCT25",
     offset: "ITM4",
     optionType: "PE",
     action: "BUY",
     quantity: 75,
-    expiryDate: "28OCT25",
     priceType: "MARKET",
-    product: "NRML"
+    product: "NRML",
+    splitSize: 0
 );
+Console.WriteLine(response);
 ```
 
-### OTM Option Order
+Place Options Order Response
+
+```json
+{
+  "exchange": "NFO",
+  "offset": "ITM4",
+  "option_type": "PE",
+  "orderid": "25102800000007",
+  "status": "success",
+  "symbol": "NIFTY28OCT2526150PE",
+  "underlying": "NIFTY28OCT25FUT",
+  "underlying_ltp": 25966.05
+}
+```
+
+To place OTM options order
 
 ```csharp
-var response = await client.OptionsOrderAsync(
+var response = client.OptionsOrder(
+    strategy: "python",
     underlying: "NIFTY",
-    exchange: "NFO",
+    exchange: "NSE_INDEX",
+    expiryDate: "28OCT25",
     offset: "OTM5",
     optionType: "CE",
     action: "BUY",
     quantity: 75,
-    expiryDate: "28OCT25",
     priceType: "MARKET",
-    product: "NRML"
+    product: "NRML",
+    splitSize: 0
 );
+Console.WriteLine(response);
 ```
 
-### OptionsOrderAsync Parameters
+Place Options Order Response
 
-| Parameter | Type | Required | Default | Description |
-|-----------|------|----------|---------|-------------|
-| underlying | string | Yes | - | Underlying symbol (NIFTY, BANKNIFTY) |
-| exchange | string | Yes | - | NFO, BFO |
-| offset | string | Yes | - | ATM, ITM1-ITM50, OTM1-OTM50 |
-| optionType | string | Yes | - | CE or PE |
-| action | string | Yes | - | BUY or SELL |
-| quantity | int | Yes | - | Quantity (multiple of lot size) |
-| strategy | string | No | "Python" | Strategy name |
-| expiryDate | string | No | null | Expiry date (DDMMMYY format) |
-| priceType | string | No | "MARKET" | MARKET, LIMIT, SL, SL-M |
-| product | string | No | "MIS" | MIS, NRML |
-| price | string | No | null | Required for LIMIT orders |
-| triggerPrice | string | No | null | Required for SL orders |
-| splitsize | int | No | 0 | Split size for large orders |
+```json
+{
+  "exchange": "NFO",
+  "mode": "analyze",
+  "offset": "OTM5",
+  "option_type": "CE",
+  "orderid": "25102800000008",
+  "status": "success",
+  "symbol": "NIFTY28OCT2526200CE",
+  "underlying": "NIFTY28OCT25FUT",
+  "underlying_ltp": 25966.05
+}
+```
 
----
+## OptionsMultiOrder Example
 
-## OptionsMultiOrderAsync
-
-Place multiple option legs with common underlying (Iron Condor, Spreads, etc.).
-
-### Iron Condor Example (Same Expiry)
+To place Iron Condor options order (Same Expiry)
 
 ```csharp
-var legs = new List<OptionLeg>
-{
-    new() { Offset = "OTM6", OptionType = "CE", Action = "BUY", Quantity = 75 },
-    new() { Offset = "OTM6", OptionType = "PE", Action = "BUY", Quantity = 75 },
-    new() { Offset = "OTM4", OptionType = "CE", Action = "SELL", Quantity = 75 },
-    new() { Offset = "OTM4", OptionType = "PE", Action = "SELL", Quantity = 75 }
-};
-
-var response = await client.OptionsMultiOrderAsync(
+var response = client.OptionsMultiOrder(
     strategy: "Iron Condor Test",
     underlying: "NIFTY",
-    exchange: "NFO",
-    legs: legs,
-    expiryDate: "25NOV25"
+    exchange: "NSE_INDEX",
+    expiryDate: "25NOV25",
+    legs: new List<OptionLeg>
+    {
+        new OptionLeg { Offset = "OTM6", OptionType = "CE", Action = "BUY", Quantity = 75 },
+        new OptionLeg { Offset = "OTM6", OptionType = "PE", Action = "BUY", Quantity = 75 },
+        new OptionLeg { Offset = "OTM4", OptionType = "CE", Action = "SELL", Quantity = 75 },
+        new OptionLeg { Offset = "OTM4", OptionType = "PE", Action = "SELL", Quantity = 75 }
+    }
 );
+Console.WriteLine(response);
 ```
 
-**Response:**
+Place OptionsMultiOrder Response
+
 ```json
 {
-  "status": "success",
-  "underlying": "NIFTY",
-  "underlying_ltp": 26050.45,
-  "results": [
-    {"action": "BUY", "leg": 1, "offset": "OTM6", "option_type": "CE", "orderid": "25111996859688", "status": "success", "symbol": "NIFTY25NOV2526350CE"},
-    {"action": "BUY", "leg": 2, "offset": "OTM6", "option_type": "PE", "orderid": "25111996042210", "status": "success", "symbol": "NIFTY25NOV2525750PE"},
-    {"action": "SELL", "leg": 3, "offset": "OTM4", "option_type": "CE", "orderid": "25111922189638", "status": "success", "symbol": "NIFTY25NOV2526250CE"},
-    {"action": "SELL", "leg": 4, "offset": "OTM4", "option_type": "PE", "orderid": "25111919252668", "status": "success", "symbol": "NIFTY25NOV2525850PE"}
-  ]
+    "status": "success",
+    "underlying": "NIFTY",
+    "underlying_ltp": 26050.45,
+    "results": [
+        {
+            "action": "BUY",
+            "leg": 1,
+            "mode": "analyze",
+            "offset": "OTM6",
+            "option_type": "CE",
+            "orderid": "25111996859688",
+            "status": "success",
+            "symbol": "NIFTY25NOV2526350CE"
+        },
+        {
+            "action": "BUY",
+            "leg": 2,
+            "mode": "analyze",
+            "offset": "OTM6",
+            "option_type": "PE",
+            "orderid": "25111996042210",
+            "status": "success",
+            "symbol": "NIFTY25NOV2525750PE"
+        },
+        {
+            "action": "SELL",
+            "leg": 3,
+            "mode": "analyze",
+            "offset": "OTM4",
+            "option_type": "CE",
+            "orderid": "25111922189638",
+            "status": "success",
+            "symbol": "NIFTY25NOV2526250CE"
+        },
+        {
+            "action": "SELL",
+            "leg": 4,
+            "mode": "analyze",
+            "offset": "OTM4",
+            "option_type": "PE",
+            "orderid": "25111919252668",
+            "status": "success",
+            "symbol": "NIFTY25NOV2525850PE"
+        }
+    ]
 }
 ```
 
-### Diagonal Spread Example (Different Expiry)
+To place Diagonal Spread options order (Different Expiry)
 
 ```csharp
-var legs = new List<OptionLeg>
-{
-    new() { Offset = "ITM2", OptionType = "CE", Action = "BUY", Quantity = 75, ExpiryDate = "30DEC25" },
-    new() { Offset = "OTM2", OptionType = "CE", Action = "SELL", Quantity = 75, ExpiryDate = "25NOV25" }
-};
-
-var response = await client.OptionsMultiOrderAsync(
+var response = client.OptionsMultiOrder(
     strategy: "Diagonal Spread Test",
     underlying: "NIFTY",
-    exchange: "NFO",
-    legs: legs
+    exchange: "NSE_INDEX",
+    legs: new List<OptionLeg>
+    {
+        new OptionLeg { Offset = "ITM2", OptionType = "CE", Action = "BUY", Quantity = 75, ExpiryDate = "30DEC25" },
+        new OptionLeg { Offset = "OTM2", OptionType = "CE", Action = "SELL", Quantity = 75, ExpiryDate = "25NOV25" }
+    }
 );
+Console.WriteLine(response);
 ```
 
-### OptionsMultiOrderAsync Parameters
+Place OptionsMultiOrder Response
 
-| Parameter | Type | Required | Default | Description |
-|-----------|------|----------|---------|-------------|
-| strategy | string | Yes | - | Strategy name |
-| underlying | string | Yes | - | Underlying symbol |
-| exchange | string | Yes | - | NFO, BFO |
-| legs | List\<OptionLeg\> | Yes | - | Array of leg objects (1-20 legs) |
-| expiryDate | string | No | null | Common expiry date (DDMMMYY) |
+```json
+{
+    "results": [
+        {
+            "action": "BUY",
+            "leg": 1,
+            "mode": "analyze",
+            "offset": "ITM2",
+            "option_type": "CE",
+            "orderid": "25111933337854",
+            "status": "success",
+            "symbol": "NIFTY30DEC2525950CE"
+        },
+        {
+            "action": "SELL",
+            "leg": 2,
+            "mode": "analyze",
+            "offset": "OTM2",
+            "option_type": "CE",
+            "orderid": "25111957475473",
+            "status": "success",
+            "symbol": "NIFTY25NOV2526150CE"
+        }
+    ],
+    "status": "success",
+    "underlying": "NIFTY",
+    "underlying_ltp": 26052.65
+}
+```
 
-### OptionLeg Properties
+## BasketOrder example
 
-| Property | Type | Required | Description |
-|----------|------|----------|-------------|
-| Offset | string | Yes | ATM, ITM1-ITM50, OTM1-OTM50 |
-| OptionType | string | Yes | CE or PE |
-| Action | string | Yes | BUY or SELL |
-| Quantity | int | Yes | Quantity (multiple of lot size) |
-| ExpiryDate | string | No | For diagonal/calendar spreads |
-| PriceType | string | No | MARKET, LIMIT, SL, SL-M |
-| Product | string | No | MIS, NRML |
-| Price | decimal? | No | Limit price |
-| TriggerPrice | decimal? | No | For SL orders |
-| DisclosedQuantity | int? | No | Disclosed quantity |
-
----
-
-## BasketOrderAsync
-
-Place multiple orders in a single request.
+To place a new basket order:
 
 ```csharp
-var orders = new List<BasketOrderItem>
+var basketOrders = new List<BasketOrderItem>
 {
-    new() { Symbol = "BHEL", Exchange = "NSE", Action = "BUY", Quantity = 1, PriceType = "MARKET", Product = "MIS" },
-    new() { Symbol = "ZOMATO", Exchange = "NSE", Action = "SELL", Quantity = 1, PriceType = "MARKET", Product = "MIS" }
+    new BasketOrderItem
+    {
+        Symbol = "BHEL",
+        Exchange = "NSE",
+        Action = "BUY",
+        Quantity = 1,
+        PriceType = "MARKET",
+        Product = "MIS"
+    },
+    new BasketOrderItem
+    {
+        Symbol = "ZOMATO",
+        Exchange = "NSE",
+        Action = "SELL",
+        Quantity = 1,
+        PriceType = "MARKET",
+        Product = "MIS"
+    }
 };
-
-var response = await client.BasketOrderAsync(orders);
+var response = client.BasketOrder(orders: basketOrders);
+Console.WriteLine(response);
 ```
 
-**Response:**
+**Basket Order Response**
+
 ```json
 {
   "status": "success",
   "results": [
-    {"symbol": "BHEL", "status": "success", "orderid": "250408000999544"},
-    {"symbol": "ZOMATO", "status": "success", "orderid": "250408000997545"}
+    {
+      "symbol": "BHEL",
+      "status": "success",
+      "orderid": "250408000999544"
+    },
+    {
+      "symbol": "ZOMATO",
+      "status": "success",
+      "orderid": "250408000997545"
+    }
   ]
 }
 ```
 
----
+## SplitOrder example
 
-## SplitOrderAsync
-
-Split large orders into smaller chunks.
+To place a new split order:
 
 ```csharp
-var response = await client.SplitOrderAsync(
+var response = client.SplitOrder(
     symbol: "YESBANK",
     exchange: "NSE",
     action: "SELL",
@@ -355,34 +414,65 @@ var response = await client.SplitOrderAsync(
     priceType: "MARKET",
     product: "MIS"
 );
+Console.WriteLine(response);
 ```
 
-**Response:**
+**SplitOrder Response**
+
 ```json
 {
   "status": "success",
   "split_size": 20,
   "total_quantity": 105,
   "results": [
-    {"order_num": 1, "orderid": "250408001021467", "quantity": 20, "status": "success"},
-    {"order_num": 2, "orderid": "250408001021459", "quantity": 20, "status": "success"},
-    {"order_num": 3, "orderid": "250408001021466", "quantity": 20, "status": "success"},
-    {"order_num": 4, "orderid": "250408001021470", "quantity": 20, "status": "success"},
-    {"order_num": 5, "orderid": "250408001021471", "quantity": 20, "status": "success"},
-    {"order_num": 6, "orderid": "250408001021472", "quantity": 5, "status": "success"}
+    {
+      "order_num": 1,
+      "orderid": "250408001021467",
+      "quantity": 20,
+      "status": "success"
+    },
+    {
+      "order_num": 2,
+      "orderid": "250408001021459",
+      "quantity": 20,
+      "status": "success"
+    },
+    {
+      "order_num": 3,
+      "orderid": "250408001021466",
+      "quantity": 20,
+      "status": "success"
+    },
+    {
+      "order_num": 4,
+      "orderid": "250408001021470",
+      "quantity": 20,
+      "status": "success"
+    },
+    {
+      "order_num": 5,
+      "orderid": "250408001021471",
+      "quantity": 20,
+      "status": "success"
+    },
+    {
+      "order_num": 6,
+      "orderid": "250408001021472",
+      "quantity": 5,
+      "status": "success"
+    }
   ]
 }
 ```
 
----
+## ModifyOrder Example
 
-## ModifyOrderAsync
-
-Modify an existing order.
+To modify an existing order:
 
 ```csharp
-var response = await client.ModifyOrderAsync(
+var response = client.ModifyOrder(
     orderId: "250408001002736",
+    strategy: "Python",
     symbol: "YESBANK",
     action: "BUY",
     exchange: "NSE",
@@ -391,74 +481,92 @@ var response = await client.ModifyOrderAsync(
     quantity: 1,
     price: "16.5"
 );
+Console.WriteLine(response);
 ```
 
-**Response:**
+**Modify Order Response**
+
 ```json
 {"orderid": "250408001002736", "status": "success"}
 ```
 
----
+## CancelOrder Example
 
-## CancelOrderAsync
-
-Cancel an existing order.
+To cancel an existing order:
 
 ```csharp
-var response = await client.CancelOrderAsync(orderId: "250408001002736");
+var response = client.CancelOrder(
+    orderId: "250408001002736",
+    strategy: "Python"
+);
+Console.WriteLine(response);
 ```
 
-**Response:**
+**Cancelorder Response**
+
 ```json
 {"orderid": "250408001002736", "status": "success"}
 ```
 
----
+## CancelAllOrder Example
 
-## CancelAllOrderAsync
-
-Cancel all open orders and trigger pending orders.
+To cancel all open orders and trigger pending orders
 
 ```csharp
-var response = await client.CancelAllOrderAsync(strategy: "CSharp");
+var response = client.CancelAllOrder(
+    strategy: "Python"
+);
+Console.WriteLine(response);
 ```
 
-**Response:**
+**Cancelallorder Response**
+
 ```json
 {
   "status": "success",
   "message": "Canceled 5 orders. Failed to cancel 0 orders.",
-  "canceled_orders": ["250408001042620", "250408001042667", "250408001042642"],
+  "canceled_orders": [
+    "250408001042620",
+    "250408001042667",
+    "250408001042642",
+    "250408001043015",
+    "250408001043386"
+  ],
   "failed_cancellations": []
 }
 ```
 
----
+## ClosePosition Example
 
-## ClosePositionAsync
-
-Close all open positions across various exchanges.
+To close all open positions across various exchanges
 
 ```csharp
-var response = await client.ClosePositionAsync(strategy: "CSharp");
+var response = client.ClosePosition(
+    strategy: "Python"
+);
+Console.WriteLine(response);
 ```
 
-**Response:**
+**ClosePosition Response**
+
 ```json
 {"message": "All Open Positions Squared Off", "status": "success"}
 ```
 
----
+## OrderStatus Example
 
-## OrderStatusAsync
-
-Get the current order status.
+To Get the Current OrderStatus
 
 ```csharp
-var response = await client.OrderStatusAsync(orderId: "250828000185002");
+var response = client.OrderStatus(
+    orderId: "250828000185002",
+    strategy: "Test Strategy"
+);
+Console.WriteLine(response);
 ```
 
-**Response:**
+**Orderstatus Response**
+
 ```json
 {
   "data": {
@@ -479,37 +587,35 @@ var response = await client.OrderStatusAsync(orderId: "250828000185002");
 }
 ```
 
----
+## OpenPosition Example
 
-## OpenPositionAsync
-
-Get the current open position for a symbol.
+To Get the Current OpenPosition
 
 ```csharp
-var response = await client.OpenPositionAsync(
-    strategy: "CSharp",
+var response = client.OpenPosition(
+    strategy: "Test Strategy",
     symbol: "YESBANK",
     exchange: "NSE",
     product: "MIS"
 );
+Console.WriteLine(response);
 ```
 
-**Response:**
+OpenPosition Response
+
 ```json
 {"quantity": "-10", "status": "success"}
 ```
 
----
-
-## QuotesAsync
-
-Get real-time quotes for a symbol.
+## Quotes Example
 
 ```csharp
-var response = await client.QuotesAsync(symbol: "RELIANCE", exchange: "NSE");
+var response = client.Quotes(symbol: "RELIANCE", exchange: "NSE");
+Console.WriteLine(response);
 ```
 
-**Response:**
+**Quotes response**
+
 ```json
 {
   "status": "success",
@@ -526,34 +632,82 @@ var response = await client.QuotesAsync(symbol: "RELIANCE", exchange: "NSE");
 }
 ```
 
----
-
-## MultiQuotesAsync
-
-Get real-time quotes for multiple symbols.
+## MultiQuotes Example
 
 ```csharp
-var symbols = new List<SymbolExchangePair>
+var response = client.MultiQuotes(symbols: new List<SymbolExchange>
 {
-    new() { Symbol = "RELIANCE", Exchange = "NSE" },
-    new() { Symbol = "TCS", Exchange = "NSE" },
-    new() { Symbol = "INFY", Exchange = "NSE" }
-};
-
-var response = await client.MultiQuotesAsync(symbols);
+    new SymbolExchange { Symbol = "RELIANCE", Exchange = "NSE" },
+    new SymbolExchange { Symbol = "TCS", Exchange = "NSE" },
+    new SymbolExchange { Symbol = "INFY", Exchange = "NSE" }
+});
+Console.WriteLine(response);
 ```
 
----
+**MultiQuotes response**
 
-## DepthAsync
+```json
+{
+  "status": "success",
+  "results": [
+    {
+      "symbol": "RELIANCE",
+      "exchange": "NSE",
+      "data": {
+        "open": 1542.3,
+        "high": 1571.6,
+        "low": 1540.5,
+        "ltp": 1569.9,
+        "prev_close": 1539.7,
+        "ask": 1569.9,
+        "bid": 0,
+        "oi": 0,
+        "volume": 14054299
+      }
+    },
+    {
+      "symbol": "TCS",
+      "exchange": "NSE",
+      "data": {
+        "open": 3118.8,
+        "high": 3178,
+        "low": 3117,
+        "ltp": 3162.9,
+        "prev_close": 3119.2,
+        "ask": 0,
+        "bid": 3162.9,
+        "oi": 0,
+        "volume": 2508527
+      }
+    },
+    {
+      "symbol": "INFY",
+      "exchange": "NSE",
+      "data": {
+        "open": 1532.1,
+        "high": 1560.3,
+        "low": 1532.1,
+        "ltp": 1557.9,
+        "prev_close": 1530.6,
+        "ask": 0,
+        "bid": 1557.9,
+        "oi": 0,
+        "volume": 7575038
+      }
+    }
+  ]
+}
+```
 
-Get market depth (order book) for a symbol.
+## Depth Example
 
 ```csharp
-var response = await client.DepthAsync(symbol: "SBIN", exchange: "NSE");
+var response = client.Depth(symbol: "SBIN", exchange: "NSE");
+Console.WriteLine(response);
 ```
 
-**Response:**
+**Depth Response**
+
 ```json
 {
   "status": "success",
@@ -568,39 +722,96 @@ var response = await client.DepthAsync(symbol: "SBIN", exchange: "NSE");
     "oi": 161265750,
     "totalbuyqty": 591351,
     "totalsellqty": 835701,
-    "asks": [{"price": 769.6, "quantity": 767}, ...],
-    "bids": [{"price": 769.4, "quantity": 886}, ...]
+    "asks": [
+      {
+        "price": 769.6,
+        "quantity": 767
+      },
+      {
+        "price": 769.65,
+        "quantity": 115
+      },
+      {
+        "price": 769.7,
+        "quantity": 162
+      },
+      {
+        "price": 769.75,
+        "quantity": 1121
+      },
+      {
+        "price": 769.8,
+        "quantity": 430
+      }
+    ],
+    "bids": [
+      {
+        "price": 769.4,
+        "quantity": 886
+      },
+      {
+        "price": 769.35,
+        "quantity": 212
+      },
+      {
+        "price": 769.3,
+        "quantity": 351
+      },
+      {
+        "price": 769.25,
+        "quantity": 343
+      },
+      {
+        "price": 769.2,
+        "quantity": 399
+      }
+    ]
   }
 }
 ```
 
----
-
-## HistoryAsync
-
-Get historical OHLCV data.
+## History Example
 
 ```csharp
-var response = await client.HistoryAsync(
+var response = client.History(
     symbol: "SBIN",
     exchange: "NSE",
     interval: "5m",
     startDate: "2025-04-01",
     endDate: "2025-04-08"
 );
+Console.WriteLine(response);
 ```
 
----
+**History Response**
 
-## IntervalsAsync
+```
+                            close    high     low    open  volume
+timestamp
+2025-04-01 09:15:00+05:30  772.50  774.00  763.20  766.50  318625
+2025-04-01 09:20:00+05:30  773.20  774.95  772.10  772.45  197189
+2025-04-01 09:25:00+05:30  775.15  775.60  772.60  773.20  227544
+2025-04-01 09:30:00+05:30  777.35  777.50  774.85  775.15  134596
+2025-04-01 09:35:00+05:30  778.00  778.00  776.25  777.50  145385
+...                           ...     ...     ...     ...     ...
+2025-04-08 14:00:00+05:30  768.25  770.70  767.85  768.50  142478
+2025-04-08 14:05:00+05:30  769.10  769.80  766.60  768.15  128283
+2025-04-08 14:10:00+05:30  769.05  769.85  768.40  769.10  119084
+2025-04-08 14:15:00+05:30  770.05  770.50  769.05  769.05  158299
+2025-04-08 14:20:00+05:30  769.95  770.50  769.40  770.05  125485
 
-Get supported time intervals.
+[437 rows x 5 columns]
+```
+
+## Intervals Example
 
 ```csharp
-var response = await client.IntervalsAsync();
+var response = client.Intervals();
+Console.WriteLine(response);
 ```
 
-**Response:**
+**Intervals response**
+
 ```json
 {
   "status": "success",
@@ -615,32 +826,112 @@ var response = await client.IntervalsAsync();
 }
 ```
 
----
+## OptionChain Example
 
-## OptionChainAsync
-
-Fetch option chain data with real-time quotes.
+Note : To fetch entire option chain for a expiry remove the strikeCount (optional) parameter
 
 ```csharp
-var response = await client.OptionChainAsync(
+var chain = client.OptionChain(
     underlying: "NIFTY",
-    exchange: "NFO",
+    exchange: "NSE_INDEX",
     expiryDate: "30DEC25",
-    strikeCount: 10  // Optional - number of strikes above/below ATM
+    strikeCount: 10
 );
+Console.WriteLine(chain);
 ```
 
----
+**OptionChain Response**
 
-## SymbolAsync
+```json
+{
+    "status": "success",
+    "underlying": "NIFTY",
+    "underlying_ltp": 26215.55,
+    "expiry_date": "30DEC25",
+    "atm_strike": 26200.0,
+    "chain": [
+        {
+            "strike": 26100.0,
+            "ce": {
+                "symbol": "NIFTY30DEC2526100CE",
+                "label": "ITM2",
+                "ltp": 490,
+                "bid": 490,
+                "ask": 491,
+                "open": 540,
+                "high": 571,
+                "low": 444.75,
+                "prev_close": 496.8,
+                "volume": 1195800,
+                "oi": 0,
+                "lotsize": 75,
+                "tick_size": 0.05
+            },
+            "pe": {
+                "symbol": "NIFTY30DEC2526100PE",
+                "label": "OTM2",
+                "ltp": 193,
+                "bid": 191.2,
+                "ask": 193,
+                "open": 204.1,
+                "high": 229.95,
+                "low": 175.6,
+                "prev_close": 215.95,
+                "volume": 1832700,
+                "oi": 0,
+                "lotsize": 75,
+                "tick_size": 0.05
+            }
+        },
+        {
+            "strike": 26200.0,
+            "ce": {
+                "symbol": "NIFTY30DEC2526200CE",
+                "label": "ATM",
+                "ltp": 427,
+                "bid": 425.05,
+                "ask": 427,
+                "open": 449.95,
+                "high": 503.5,
+                "low": 384,
+                "prev_close": 433.2,
+                "volume": 2994000,
+                "oi": 0,
+                "lotsize": 75,
+                "tick_size": 0.05
+            },
+            "pe": {
+                "symbol": "NIFTY30DEC2526200PE",
+                "label": "ATM",
+                "ltp": 227.4,
+                "bid": 227.35,
+                "ask": 228.5,
+                "open": 251.9,
+                "high": 269.15,
+                "low": 205.95,
+                "prev_close": 251.9,
+                "volume": 3745350,
+                "oi": 0,
+                "lotsize": 75,
+                "tick_size": 0.05
+            }
+        }
+    ]
+}
+```
 
-Get symbol details.
+## Symbol Example
 
 ```csharp
-var response = await client.SymbolAsync(symbol: "NIFTY30DEC25FUT", exchange: "NFO");
+var response = client.Symbol(
+    symbol: "NIFTY30DEC25FUT",
+    exchange: "NFO"
+);
+Console.WriteLine(response);
 ```
 
-**Response:**
+**Symbols Response**
+
 ```json
 {
   "data": {
@@ -649,43 +940,82 @@ var response = await client.SymbolAsync(symbol: "NIFTY30DEC25FUT", exchange: "NF
     "exchange": "NFO",
     "expiry": "30-DEC-25",
     "freeze_qty": 1800,
+    "id": 57900,
     "instrumenttype": "FUT",
     "lotsize": 75,
     "name": "NIFTY",
+    "strike": 0,
     "symbol": "NIFTY30DEC25FUT",
+    "tick_size": 10,
     "token": "NSE_FO|49543"
   },
   "status": "success"
 }
 ```
 
----
-
-## SearchAsync
-
-Search for symbols across exchanges.
+## Search Example
 
 ```csharp
-var response = await client.SearchAsync(query: "NIFTY 26000 DEC CE", exchange: "NFO");
+var response = client.Search(query: "NIFTY 26000 DEC CE", exchange: "NFO");
+Console.WriteLine(response);
 ```
 
----
+**Search Response**
 
-## OptionSymbolAsync
+```json
+{
+  "data": [
+    {
+      "brexchange": "NSE_FO",
+      "brsymbol": "NIFTY 26000 CE 30 DEC 25",
+      "exchange": "NFO",
+      "expiry": "30-DEC-25",
+      "freeze_qty": 1800,
+      "instrumenttype": "CE",
+      "lotsize": 75,
+      "name": "NIFTY",
+      "strike": 26000,
+      "symbol": "NIFTY30DEC2526000CE",
+      "tick_size": 5,
+      "token": "NSE_FO|71399"
+    },
+    {
+      "brexchange": "NSE_FO",
+      "brsymbol": "NIFTY 26000 CE 29 DEC 26",
+      "exchange": "NFO",
+      "expiry": "29-DEC-26",
+      "freeze_qty": 1800,
+      "instrumenttype": "CE",
+      "lotsize": 75,
+      "name": "NIFTY",
+      "strike": 26000,
+      "symbol": "NIFTY29DEC2626000CE",
+      "tick_size": 5,
+      "token": "NSE_FO|71505"
+    }
+  ],
+  "message": "Found 7 matching symbols",
+  "status": "success"
+}
+```
 
-Get option symbol details based on underlying and offset.
+## OptionSymbol Example
+
+ATM Option
 
 ```csharp
-var response = await client.OptionSymbolAsync(
+var response = client.OptionSymbol(
     underlying: "NIFTY",
-    exchange: "NFO",
+    exchange: "NSE_INDEX",
+    expiryDate: "30DEC25",
     offset: "ATM",
-    optionType: "CE",
-    expiryDate: "30DEC25"
+    optionType: "CE"
 );
+Console.WriteLine(response);
 ```
 
-**Response:**
+**OptionSymbol Response**
+
 ```json
 {
   "status": "success",
@@ -698,21 +1028,73 @@ var response = await client.OptionSymbolAsync(
 }
 ```
 
----
-
-## SyntheticFutureAsync
-
-Calculate synthetic futures price using ATM options.
+ITM Option
 
 ```csharp
-var response = await client.SyntheticFutureAsync(
+var response = client.OptionSymbol(
     underlying: "NIFTY",
-    exchange: "NFO",
-    expiryDate: "25NOV25"
+    exchange: "NSE_INDEX",
+    expiryDate: "30DEC25",
+    offset: "ITM3",
+    optionType: "PE"
 );
+Console.WriteLine(response);
 ```
 
-**Response:**
+**OptionSymbol Response**
+
+```json
+{
+  "status": "success",
+  "symbol": "NIFTY30DEC2526100PE",
+  "exchange": "NFO",
+  "lotsize": 75,
+  "tick_size": 5,
+  "freeze_qty": 1800,
+  "underlying_ltp": 25966.4
+}
+```
+
+OTM Option
+
+```csharp
+var response = client.OptionSymbol(
+    underlying: "NIFTY",
+    exchange: "NSE_INDEX",
+    expiryDate: "30DEC25",
+    offset: "OTM4",
+    optionType: "CE"
+);
+Console.WriteLine(response);
+```
+
+**OptionSymbol Response**
+
+```json
+{
+  "status": "success",
+  "symbol": "NIFTY30DEC2526150CE",
+  "exchange": "NFO",
+  "lotsize": 75,
+  "tick_size": 5,
+  "freeze_qty": 1800,
+  "underlying_ltp": 25966.4
+}
+```
+
+## SyntheticFuture Example
+
+```csharp
+var response = client.SyntheticFuture(
+    underlying: "NIFTY",
+    exchange: "NSE_INDEX",
+    expiryDate: "25NOV25"
+);
+Console.WriteLine(response);
+```
+
+SyntheticFuture **Response**
+
 ```json
 {
   "atm_strike": 25900.0,
@@ -724,23 +1106,21 @@ var response = await client.SyntheticFutureAsync(
 }
 ```
 
----
-
-## OptionGreeksAsync
-
-Calculate option Greeks using Black-76 model.
+## OptionGreeks Example
 
 ```csharp
-var response = await client.OptionGreeksAsync(
+var response = client.OptionGreeks(
     symbol: "NIFTY25NOV2526000CE",
     exchange: "NFO",
-    interestRate: 0.00m,
+    interestRate: 0.00,
     underlyingSymbol: "NIFTY",
     underlyingExchange: "NSE_INDEX"
 );
+Console.WriteLine(response);
 ```
 
-**Response:**
+OptionGreeks **Response**
+
 ```json
 {
   "days_to_expiry": 28.5071,
@@ -754,70 +1134,110 @@ var response = await client.OptionGreeksAsync(
     "vega": 28.9489
   },
   "implied_volatility": 15.6,
+  "interest_rate": 0.0,
   "option_price": 435,
+  "option_type": "CE",
+  "spot_price": 25966.05,
   "status": "success",
-  "symbol": "NIFTY25NOV2526000CE"
+  "strike": 26000.0,
+  "symbol": "NIFTY25NOV2526000CE",
+  "underlying": "NIFTY"
 }
 ```
 
----
-
-## ExpiryAsync
-
-Get expiry dates for a symbol.
+## Expiry Example
 
 ```csharp
-var response = await client.ExpiryAsync(
+var response = client.Expiry(
     symbol: "NIFTY",
     exchange: "NFO",
-    instrumenttype: "options"
+    instrumentType: "options"
 );
+Console.WriteLine(response);
 ```
 
----
+**Expiry Response**
 
-## InstrumentsAsync
-
-Download all trading symbols and instruments.
-
-```csharp
-// Get instruments for specific exchange
-var response = await client.InstrumentsAsync(exchange: "NSE");
-
-// Get all instruments from all exchanges
-var allResponse = await client.InstrumentsAsync();
-```
-
----
-
-## TelegramAsync
-
-Send custom alert messages to Telegram.
-
-```csharp
-var response = await client.TelegramAsync(
-    username: "your_openalgo_username",
-    message: "NIFTY crossed 26000!",
-    priority: 5  // Optional, 1-10
-);
-```
-
-**Response:**
 ```json
-{"message": "Notification sent successfully", "status": "success"}
+{
+  "data": [
+    "10-JUL-25",
+    "17-JUL-25",
+    "24-JUL-25",
+    "31-JUL-25",
+    "07-AUG-25",
+    "28-AUG-25",
+    "25-SEP-25",
+    "24-DEC-25",
+    "26-MAR-26",
+    "25-JUN-26",
+    "31-DEC-26",
+    "24-JUN-27",
+    "30-DEC-27",
+    "29-JUN-28",
+    "28-DEC-28",
+    "28-JUN-29",
+    "27-DEC-29",
+    "25-JUN-30"
+  ],
+  "message": "Found 18 expiry dates for NIFTY options in NFO",
+  "status": "success"
+}
 ```
 
----
-
-## FundsAsync
-
-Get funds and margin details.
+## Instruments Example
 
 ```csharp
-var response = await client.FundsAsync();
+var response = client.Instruments(exchange: "NSE");
+Console.WriteLine(response);
 ```
 
-**Response:**
+Instruments **Response**
+
+```
+     brexchange           brsymbol exchange expiry instrumenttype  lotsize  \
+3041        NSE      NSE:NEOGEN-EQ      NSE   None             EQ        1
+3042        NSE     NSE:ALANKIT-EQ      NSE   None             EQ        1
+3043        NSE  NSE:EVERESTIND-EQ      NSE   None             EQ        1
+3044        NSE   NSE:VIKASLIFE-EQ      NSE   None             EQ        1
+3045        NSE    NSE:ONEPOINT-EQ      NSE   None             EQ        1
+
+                          name  strike      symbol  tick_size           token
+3041  NEOGEN CHEMICALS LIMITED    -1.0      NEOGEN       0.10  10100000009917
+3042           ALANKIT LIMITED    -1.0     ALANKIT       0.01  10100000009921
+3043    EVEREST INDUSTRIES LTD    -1.0  EVERESTIND       0.05   1010000000993
+3044    VIKAS LIFECARE LIMITED    -1.0   VIKASLIFE       0.01  10100000009931
+3045     ONE POINT ONE SOL LTD    -1.0    ONEPOINT       0.01  10100000009939
+```
+
+## Telegram Alert Example
+
+```csharp
+var response = client.Telegram(
+    username: "<openalgo_loginid>",
+    message: "NIFTY crossed 26000!"
+);
+Console.WriteLine(response);
+```
+
+**Telegram Alert Response**
+
+```json
+{
+  "message": "Notification sent successfully",
+  "status": "success"
+}
+```
+
+## Funds Example
+
+```csharp
+var response = client.Funds();
+Console.WriteLine(response);
+```
+
+**Funds Response**
+
 ```json
 {
   "status": "success",
@@ -831,230 +1251,404 @@ var response = await client.FundsAsync();
 }
 ```
 
----
-
-## MarginAsync
-
-Calculate margin requirements for positions.
+## Margin Example
 
 ```csharp
-var positions = new List<MarginPosition>
+var response = client.Margin(positions: new List<MarginPosition>
 {
-    new() { Symbol = "NIFTY25NOV2525000CE", Exchange = "NFO", Action = "BUY", Product = "NRML", PriceType = "MARKET", Quantity = 75 },
-    new() { Symbol = "NIFTY25NOV2525500CE", Exchange = "NFO", Action = "SELL", Product = "NRML", PriceType = "MARKET", Quantity = 75 }
-};
-
-var response = await client.MarginAsync(positions);
+    new MarginPosition
+    {
+        Symbol = "NIFTY25NOV2525000CE",
+        Exchange = "NFO",
+        Action = "BUY",
+        Product = "NRML",
+        PriceType = "MARKET",
+        Quantity = 75
+    },
+    new MarginPosition
+    {
+        Symbol = "NIFTY25NOV2525500CE",
+        Exchange = "NFO",
+        Action = "SELL",
+        Product = "NRML",
+        PriceType = "MARKET",
+        Quantity = 75
+    }
+});
+Console.WriteLine(response);
 ```
 
-**Response:**
+**Margin Response**
+
+```json
+{
+    "status": "success",
+    "data": {
+      "total_margin_required": 91555.7625,
+      "span_margin": 0.0,
+      "exposure_margin": 91555.7625
+    }
+}
+```
+
+## OrderBook Example
+
+```csharp
+var response = client.OrderBook();
+Console.WriteLine(response);
+```
+
+**OrderBook Response**
+
 ```json
 {
   "status": "success",
   "data": {
-    "total_margin_required": 91555.7625,
-    "span_margin": 0.0,
-    "exposure_margin": 91555.7625
+    "orders": [
+      {
+        "action": "BUY",
+        "symbol": "RELIANCE",
+        "exchange": "NSE",
+        "orderid": "250408000989443",
+        "product": "MIS",
+        "quantity": "1",
+        "price": 1186.0,
+        "pricetype": "MARKET",
+        "order_status": "complete",
+        "trigger_price": 0.0,
+        "timestamp": "08-Apr-2025 13:58:03"
+      },
+      {
+        "action": "BUY",
+        "symbol": "YESBANK",
+        "exchange": "NSE",
+        "orderid": "250408001002736",
+        "product": "MIS",
+        "quantity": "1",
+        "price": 16.5,
+        "pricetype": "LIMIT",
+        "order_status": "cancelled",
+        "trigger_price": 0.0,
+        "timestamp": "08-Apr-2025 14:13:45"
+      }
+    ],
+    "statistics": {
+      "total_buy_orders": 2.0,
+      "total_sell_orders": 0.0,
+      "total_completed_orders": 1.0,
+      "total_open_orders": 0.0,
+      "total_rejected_orders": 0.0
+    }
   }
 }
 ```
 
----
-
-## OrderBookAsync
-
-Get orderbook details.
+## TradeBook Example
 
 ```csharp
-var response = await client.OrderBookAsync();
+var response = client.TradeBook();
+Console.WriteLine(response);
 ```
 
----
+**TradeBook Response**
 
-## TradeBookAsync
+```json
+{
+  "status": "success",
+  "data": [
+    {
+      "action": "BUY",
+      "symbol": "RELIANCE",
+      "exchange": "NSE",
+      "orderid": "250408000989443",
+      "product": "MIS",
+      "quantity": 0.0,
+      "average_price": 1180.1,
+      "timestamp": "13:58:03",
+      "trade_value": 1180.1
+    },
+    {
+      "action": "SELL",
+      "symbol": "NHPC",
+      "exchange": "NSE",
+      "orderid": "250408001086129",
+      "product": "MIS",
+      "quantity": 0.0,
+      "average_price": 83.74,
+      "timestamp": "14:28:49",
+      "trade_value": 83.74
+    }
+  ]
+}
+```
 
-Get tradebook details.
+## PositionBook Example
 
 ```csharp
-var response = await client.TradeBookAsync();
+var response = client.PositionBook();
+Console.WriteLine(response);
 ```
 
----
+**PositionBook Response**
 
-## PositionBookAsync
+```json
+{
+  "status": "success",
+  "data": [
+    {
+      "symbol": "NHPC",
+      "exchange": "NSE",
+      "product": "MIS",
+      "quantity": "-1",
+      "average_price": "83.74",
+      "ltp": "83.72",
+      "pnl": "0.02"
+    },
+    {
+      "symbol": "RELIANCE",
+      "exchange": "NSE",
+      "product": "MIS",
+      "quantity": "0",
+      "average_price": "0.0",
+      "ltp": "1189.9",
+      "pnl": "5.90"
+    },
+    {
+      "symbol": "YESBANK",
+      "exchange": "NSE",
+      "product": "MIS",
+      "quantity": "-104",
+      "average_price": "17.2",
+      "ltp": "17.31",
+      "pnl": "-10.44"
+    }
+  ]
+}
+```
 
-Get positionbook details.
+## Holdings Example
 
 ```csharp
-var response = await client.PositionBookAsync();
+var response = client.Holdings();
+Console.WriteLine(response);
 ```
 
----
+**Holdings Response**
 
-## HoldingsAsync
+```json
+{
+  "status": "success",
+  "data": {
+    "holdings": [
+      {
+        "symbol": "RELIANCE",
+        "exchange": "NSE",
+        "product": "CNC",
+        "quantity": 1,
+        "pnl": -149.0,
+        "pnlpercent": -11.1
+      },
+      {
+        "symbol": "TATASTEEL",
+        "exchange": "NSE",
+        "product": "CNC",
+        "quantity": 1,
+        "pnl": -15.0,
+        "pnlpercent": -10.41
+      },
+      {
+        "symbol": "CANBK",
+        "exchange": "NSE",
+        "product": "CNC",
+        "quantity": 5,
+        "pnl": -69.0,
+        "pnlpercent": -13.43
+      }
+    ],
+    "statistics": {
+      "totalholdingvalue": 1768.0,
+      "totalinvvalue": 2001.0,
+      "totalprofitandloss": -233.15,
+      "totalpnlpercentage": -11.65
+    }
+  }
+}
+```
 
-Get stock holdings.
+## Holidays Example
 
 ```csharp
-var response = await client.HoldingsAsync();
+var response = client.Holidays(year: 2026);
+Console.WriteLine(response);
 ```
 
----
+**Holidays Response**
 
-## HolidaysAsync
-
-Get trading holidays for a year.
-
-```csharp
-var response = await client.HolidaysAsync(year: 2026);
-```
-
-**Response:**
 ```json
 {
   "data": [
-    {"closed_exchanges": ["NSE", "BSE", "NFO", "BFO", "CDS", "BCD", "MCX"], "date": "2026-01-26", "description": "Republic Day", "holiday_type": "TRADING_HOLIDAY", "open_exchanges": []},
-    {"closed_exchanges": ["NSE", "BSE", "NFO", "BFO", "CDS", "BCD"], "date": "2026-03-10", "description": "Holi", "holiday_type": "TRADING_HOLIDAY", "open_exchanges": [{"exchange": "MCX", "start_time": 1741624200000, "end_time": 1741677900000}]}
+    {
+      "closed_exchanges": ["NSE", "BSE", "NFO", "BFO", "CDS", "BCD", "MCX"],
+      "date": "2026-01-26",
+      "description": "Republic Day",
+      "holiday_type": "TRADING_HOLIDAY",
+      "open_exchanges": []
+    },
+    {
+      "closed_exchanges": [],
+      "date": "2026-02-19",
+      "description": "Chhatrapati Shivaji Maharaj Jayanti",
+      "holiday_type": "SETTLEMENT_HOLIDAY",
+      "open_exchanges": []
+    },
+    {
+      "closed_exchanges": ["NSE", "BSE", "NFO", "BFO", "CDS", "BCD"],
+      "date": "2026-03-10",
+      "description": "Holi",
+      "holiday_type": "TRADING_HOLIDAY",
+      "open_exchanges": [
+        {
+          "end_time": 1741677900000,
+          "exchange": "MCX",
+          "start_time": 1741624200000
+        }
+      ]
+    },
+    {
+      "closed_exchanges": ["NSE", "BSE", "NFO", "BFO", "CDS", "BCD"],
+      "date": "2026-03-20",
+      "description": "Id-Ul-Fitr (Ramadan)",
+      "holiday_type": "TRADING_HOLIDAY",
+      "open_exchanges": [
+        {
+          "end_time": 1742541900000,
+          "exchange": "MCX",
+          "start_time": 1742488200000
+        }
+      ]
+    },
+    {
+      "closed_exchanges": ["NSE", "BSE", "NFO", "BFO", "CDS", "BCD"],
+      "date": "2026-03-25",
+      "description": "Holi (Dhuleti)",
+      "holiday_type": "TRADING_HOLIDAY",
+      "open_exchanges": [
+        {
+          "end_time": 1742973900000,
+          "exchange": "MCX",
+          "start_time": 1742920200000
+        }
+      ]
+    }
   ],
-  "status": "success",
-  "timezone": "Asia/Kolkata",
-  "year": 2026
+  "status": "success"
+}
+```
+
+## Timings Example
+
+```csharp
+var response = client.Timings(date: "2025-12-19");
+Console.WriteLine(response);
+```
+
+**Timings Response**
+
+```json
+{
+  "data": [
+    {
+      "end_time": 1766138400000,
+      "exchange": "NSE",
+      "start_time": 1766115900000
+    },
+    {
+      "end_time": 1766138400000,
+      "exchange": "BSE",
+      "start_time": 1766115900000
+    },
+    {
+      "end_time": 1766138400000,
+      "exchange": "NFO",
+      "start_time": 1766115900000
+    },
+    {
+      "end_time": 1766138400000,
+      "exchange": "BFO",
+      "start_time": 1766115900000
+    },
+    {
+      "end_time": 1766168700000,
+      "exchange": "MCX",
+      "start_time": 1766115000000
+    },
+    {
+      "end_time": 1766143800000,
+      "exchange": "BCD",
+      "start_time": 1766115000000
+    },
+    {
+      "end_time": 1766143800000,
+      "exchange": "CDS",
+      "start_time": 1766115000000
+    }
+  ],
+  "status": "success"
+}
+```
+
+## Analyzer Status Example
+
+```csharp
+var response = client.AnalyzerStatus();
+Console.WriteLine(response);
+```
+
+**Analyzer Status Response**
+
+```json
+{
+  "data": {
+    "analyze_mode": true,
+    "mode": "analyze",
+    "total_logs": 2
+  },
+  "status": "success"
+}
+```
+
+## Analyzer Toggle Example
+
+```csharp
+// Switch to analyze mode (simulated responses)
+var response = client.AnalyzerToggle(mode: true);
+Console.WriteLine(response);
+```
+
+**Analyzer Toggle Response**
+
+```json
+{
+  "data": {
+    "analyze_mode": true,
+    "message": "Analyzer mode switched to analyze",
+    "mode": "analyze",
+    "total_logs": 2
+  },
+  "status": "success"
 }
 ```
 
 ---
 
-## TimingsAsync
+# Async API Reference
 
-Get exchange timings for a date.
-
-```csharp
-var response = await client.TimingsAsync(date: "2025-12-19");
-```
-
----
-
-## AnalyzerStatusAsync
-
-Get analyzer status information.
+All methods have async versions with the `Async` suffix. For example:
 
 ```csharp
-var response = await client.AnalyzerStatusAsync();
-```
-
-**Response:**
-```json
-{"data": {"analyze_mode": true, "mode": "analyze", "total_logs": 2}, "status": "success"}
-```
-
----
-
-## AnalyzerToggleAsync
-
-Toggle analyzer mode.
-
-```csharp
-// Switch to analyze mode (simulated responses)
-var response = await client.AnalyzerToggleAsync(mode: true);
-
-// Switch to live mode
-var response = await client.AnalyzerToggleAsync(mode: false);
-```
-
----
-
-# WebSocket Streaming (Async)
-
-## ConnectAsync
-
-Connect to the WebSocket server.
-
-```csharp
-var connected = await client.ConnectAsync();
-```
-
-## SubscribeLtpAsync
-
-Subscribe to LTP (Last Traded Price) updates.
-
-```csharp
-var instruments = new List<Instrument>
-{
-    new() { Exchange = "NSE", Symbol = "RELIANCE" },
-    new() { Exchange = "NSE", Symbol = "INFY" }
-};
-
-await client.SubscribeLtpAsync(instruments, data =>
-{
-    Console.WriteLine($"LTP Update: {data.Exchange}:{data.Symbol} = {data.Price}");
-});
-```
-
-## SubscribeQuoteAsync
-
-Subscribe to Quote updates.
-
-```csharp
-await client.SubscribeQuoteAsync(instruments, data =>
-{
-    Console.WriteLine($"Quote: {data.Symbol} O:{data.Open} H:{data.High} L:{data.Low} LTP:{data.Ltp}");
-});
-```
-
-## SubscribeDepthAsync
-
-Subscribe to Market Depth updates.
-
-```csharp
-await client.SubscribeDepthAsync(instruments, data =>
-{
-    Console.WriteLine($"Depth: {data.Symbol} LTP:{data.Ltp}");
-    Console.WriteLine($"  Best Bid: {data.Buy[0].Price} x {data.Buy[0].Quantity}");
-    Console.WriteLine($"  Best Ask: {data.Sell[0].Price} x {data.Sell[0].Quantity}");
-});
-```
-
-## UnsubscribeAsync
-
-```csharp
-await client.UnsubscribeLtpAsync(instruments);
-await client.UnsubscribeQuoteAsync(instruments);
-await client.UnsubscribeDepthAsync(instruments);
-```
-
-## DisconnectAsync
-
-```csharp
-await client.DisconnectAsync();
-```
-
-## Get Stored Data
-
-```csharp
-// Get all LTP data
-var ltpData = client.GetLtp();
-
-// Filter by exchange
-var nseLtp = client.GetLtp(exchange: "NSE");
-
-// Filter by exchange and symbol
-var relianceLtp = client.GetLtp(exchange: "NSE", symbol: "RELIANCE");
-
-// Same for quotes and depth
-var quotes = client.GetQuotes();
-var depth = client.GetDepth();
-```
-
----
-
-# Sync API Reference
-
-All async methods have synchronous equivalents without the `Async` suffix. Sync methods internally call the async versions.
-
-## PlaceOrder
-
-```csharp
-var response = client.PlaceOrder(
+// Async PlaceOrder
+var response = await client.PlaceOrderAsync(
+    strategy: "Python",
     symbol: "NHPC",
     action: "BUY",
     exchange: "NSE",
@@ -1062,391 +1656,221 @@ var response = client.PlaceOrder(
     product: "MIS",
     quantity: 1
 );
+
+// Async Quotes
+var quotes = await client.QuotesAsync(symbol: "RELIANCE", exchange: "NSE");
+
+// Async OrderBook
+var orderBook = await client.OrderBookAsync();
+
+// Async with CancellationToken
+using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+var funds = await client.FundsAsync(cts.Token);
 ```
 
-## PlaceSmartOrder
-
-```csharp
-var response = client.PlaceSmartOrder(
-    symbol: "TATAMOTORS",
-    action: "SELL",
-    exchange: "NSE",
-    priceType: "MARKET",
-    product: "MIS",
-    quantity: 1,
-    positionSize: 5
-);
-```
-
-## OptionsOrder
-
-```csharp
-var response = client.OptionsOrder(
-    underlying: "NIFTY",
-    exchange: "NFO",
-    offset: "ATM",
-    optionType: "CE",
-    action: "BUY",
-    quantity: 75,
-    expiryDate: "28OCT25",
-    priceType: "MARKET",
-    product: "NRML"
-);
-```
-
-## OptionsMultiOrder
-
-```csharp
-var legs = new List<OptionLeg>
-{
-    new() { Offset = "OTM6", OptionType = "CE", Action = "BUY", Quantity = 75 },
-    new() { Offset = "OTM6", OptionType = "PE", Action = "BUY", Quantity = 75 }
-};
-
-var response = client.OptionsMultiOrder(
-    strategy: "Iron Condor",
-    underlying: "NIFTY",
-    exchange: "NFO",
-    legs: legs,
-    expiryDate: "25NOV25"
-);
-```
-
-## BasketOrder
-
-```csharp
-var orders = new List<BasketOrderItem>
-{
-    new() { Symbol = "BHEL", Exchange = "NSE", Action = "BUY", Quantity = 1, PriceType = "MARKET", Product = "MIS" },
-    new() { Symbol = "ZOMATO", Exchange = "NSE", Action = "SELL", Quantity = 1, PriceType = "MARKET", Product = "MIS" }
-};
-
-var response = client.BasketOrder(orders);
-```
-
-## SplitOrder
-
-```csharp
-var response = client.SplitOrder(
-    symbol: "YESBANK",
-    exchange: "NSE",
-    action: "SELL",
-    quantity: 105,
-    splitSize: 20,
-    priceType: "MARKET",
-    product: "MIS"
-);
-```
-
-## ModifyOrder
-
-```csharp
-var response = client.ModifyOrder(
-    orderId: "250408001002736",
-    symbol: "YESBANK",
-    action: "BUY",
-    exchange: "NSE",
-    priceType: "LIMIT",
-    product: "CNC",
-    quantity: 1,
-    price: "16.5"
-);
-```
-
-## CancelOrder
-
-```csharp
-var response = client.CancelOrder(orderId: "250408001002736");
-```
-
-## CancelAllOrder
-
-```csharp
-var response = client.CancelAllOrder(strategy: "CSharp");
-```
-
-## ClosePosition
-
-```csharp
-var response = client.ClosePosition(strategy: "CSharp");
-```
-
-## OrderStatus
-
-```csharp
-var response = client.OrderStatus(orderId: "250828000185002");
-```
-
-## OpenPosition
-
-```csharp
-var response = client.OpenPosition(
-    strategy: "CSharp",
-    symbol: "YESBANK",
-    exchange: "NSE",
-    product: "MIS"
-);
-```
-
-## Quotes
-
-```csharp
-var response = client.Quotes(symbol: "RELIANCE", exchange: "NSE");
-```
-
-## MultiQuotes
-
-```csharp
-var symbols = new List<SymbolExchangePair>
-{
-    new() { Symbol = "RELIANCE", Exchange = "NSE" },
-    new() { Symbol = "TCS", Exchange = "NSE" }
-};
-
-var response = client.MultiQuotes(symbols);
-```
-
-## Depth
-
-```csharp
-var response = client.Depth(symbol: "SBIN", exchange: "NSE");
-```
-
-## History
-
-```csharp
-var response = client.History(
-    symbol: "SBIN",
-    exchange: "NSE",
-    interval: "5m",
-    startDate: "2025-04-01",
-    endDate: "2025-04-08"
-);
-```
-
-## Intervals
-
-```csharp
-var response = client.Intervals();
-```
-
-## OptionChain
-
-```csharp
-var response = client.OptionChain(
-    underlying: "NIFTY",
-    exchange: "NFO",
-    expiryDate: "30DEC25",
-    strikeCount: 10
-);
-```
-
-## Symbol
-
-```csharp
-var response = client.Symbol(symbol: "NIFTY30DEC25FUT", exchange: "NFO");
-```
-
-## Search
-
-```csharp
-var response = client.Search(query: "NIFTY 26000 DEC CE", exchange: "NFO");
-```
-
-## OptionSymbol
-
-```csharp
-var response = client.OptionSymbol(
-    underlying: "NIFTY",
-    exchange: "NFO",
-    offset: "ATM",
-    optionType: "CE",
-    expiryDate: "30DEC25"
-);
-```
-
-## SyntheticFuture
-
-```csharp
-var response = client.SyntheticFuture(
-    underlying: "NIFTY",
-    exchange: "NFO",
-    expiryDate: "25NOV25"
-);
-```
-
-## OptionGreeks
-
-```csharp
-var response = client.OptionGreeks(
-    symbol: "NIFTY25NOV2526000CE",
-    exchange: "NFO"
-);
-```
-
-## Expiry
-
-```csharp
-var response = client.Expiry(
-    symbol: "NIFTY",
-    exchange: "NFO",
-    instrumenttype: "options"
-);
-```
-
-## Instruments
-
-```csharp
-var response = client.Instruments(exchange: "NSE");
-```
-
-## Telegram
-
-```csharp
-var response = client.Telegram(
-    username: "your_openalgo_username",
-    message: "Alert message!"
-);
-```
-
-## Funds
-
-```csharp
-var response = client.Funds();
-```
-
-## Margin
-
-```csharp
-var positions = new List<MarginPosition>
-{
-    new() { Symbol = "NIFTY25NOV2525000CE", Exchange = "NFO", Action = "BUY", Product = "NRML", PriceType = "MARKET", Quantity = 75 }
-};
-
-var response = client.Margin(positions);
-```
-
-## OrderBook
-
-```csharp
-var response = client.OrderBook();
-```
-
-## TradeBook
-
-```csharp
-var response = client.TradeBook();
-```
-
-## PositionBook
-
-```csharp
-var response = client.PositionBook();
-```
-
-## Holdings
-
-```csharp
-var response = client.Holdings();
-```
-
-## Holidays
-
-```csharp
-var response = client.Holidays(year: 2026);
-```
-
-## Timings
-
-```csharp
-var response = client.Timings(date: "2025-12-19");
-```
-
-## AnalyzerStatus
-
-```csharp
-var response = client.AnalyzerStatus();
-```
-
-## AnalyzerToggle
-
-```csharp
-var response = client.AnalyzerToggle(mode: true);
-```
+### Available Async Methods
+
+| Sync Method | Async Method |
+|------------|--------------|
+| `PlaceOrder()` | `PlaceOrderAsync()` |
+| `PlaceSmartOrder()` | `PlaceSmartOrderAsync()` |
+| `OptionsOrder()` | `OptionsOrderAsync()` |
+| `OptionsMultiOrder()` | `OptionsMultiOrderAsync()` |
+| `BasketOrder()` | `BasketOrderAsync()` |
+| `SplitOrder()` | `SplitOrderAsync()` |
+| `ModifyOrder()` | `ModifyOrderAsync()` |
+| `CancelOrder()` | `CancelOrderAsync()` |
+| `CancelAllOrder()` | `CancelAllOrderAsync()` |
+| `ClosePosition()` | `ClosePositionAsync()` |
+| `OrderStatus()` | `OrderStatusAsync()` |
+| `OpenPosition()` | `OpenPositionAsync()` |
+| `Quotes()` | `QuotesAsync()` |
+| `MultiQuotes()` | `MultiQuotesAsync()` |
+| `Depth()` | `DepthAsync()` |
+| `History()` | `HistoryAsync()` |
+| `Intervals()` | `IntervalsAsync()` |
+| `OptionChain()` | `OptionChainAsync()` |
+| `Symbol()` | `SymbolAsync()` |
+| `Search()` | `SearchAsync()` |
+| `OptionSymbol()` | `OptionSymbolAsync()` |
+| `SyntheticFuture()` | `SyntheticFutureAsync()` |
+| `OptionGreeks()` | `OptionGreeksAsync()` |
+| `Expiry()` | `ExpiryAsync()` |
+| `Instruments()` | `InstrumentsAsync()` |
+| `Telegram()` | `TelegramAsync()` |
+| `Funds()` | `FundsAsync()` |
+| `Margin()` | `MarginAsync()` |
+| `OrderBook()` | `OrderBookAsync()` |
+| `TradeBook()` | `TradeBookAsync()` |
+| `PositionBook()` | `PositionBookAsync()` |
+| `Holdings()` | `HoldingsAsync()` |
+| `Holidays()` | `HolidaysAsync()` |
+| `Timings()` | `TimingsAsync()` |
+| `AnalyzerStatus()` | `AnalyzerStatusAsync()` |
+| `AnalyzerToggle()` | `AnalyzerToggleAsync()` |
 
 ---
 
-# WebSocket Streaming (Sync)
+# WebSocket Streaming
 
-## Connect
-
-```csharp
-var connected = client.Connect();
-```
-
-## SubscribeLtp
+## LTP Data (Streaming Websocket)
 
 ```csharp
+using OpenAlgo.NET;
+
+// Initialize OpenAlgo client
+var client = new Api(
+    apiKey: "your_api_key",                  // Replace with your actual OpenAlgo API key
+    host: "http://127.0.0.1:5000",           // REST API host
+    wsUrl: "ws://127.0.0.1:8765"             // WebSocket host
+);
+
+// Define instruments to subscribe for LTP
 var instruments = new List<Instrument>
 {
-    new() { Exchange = "NSE", Symbol = "RELIANCE" },
-    new() { Exchange = "NSE", Symbol = "INFY" }
+    new Instrument { Exchange = "NSE", Symbol = "RELIANCE" },
+    new Instrument { Exchange = "NSE", Symbol = "INFY" }
 };
 
-client.SubscribeLtp(instruments, data =>
+// Callback function for LTP updates
+void OnLtp(LtpData data)
 {
-    Console.WriteLine($"LTP: {data.Symbol} = {data.Price}");
-});
-```
+    Console.WriteLine("LTP Update Received:");
+    Console.WriteLine(data);
+}
 
-## SubscribeQuote
+// Connect and subscribe
+client.Connect();
+client.SubscribeLtp(instruments, OnLtp);
 
-```csharp
-client.SubscribeQuote(instruments, data =>
+// Run for a few seconds to receive data
+try
 {
-    Console.WriteLine($"Quote: {data.Symbol} LTP:{data.Ltp}");
-});
-```
-
-## SubscribeDepth
-
-```csharp
-client.SubscribeDepth(instruments, data =>
+    Thread.Sleep(10000);
+}
+finally
 {
-    Console.WriteLine($"Depth: {data.Symbol} LTP:{data.Ltp}");
-});
+    client.UnsubscribeLtp(instruments);
+    client.Disconnect();
+}
 ```
 
-## Unsubscribe
+## Quotes (Streaming Websocket)
 
 ```csharp
-client.UnsubscribeLtp(instruments);
-client.UnsubscribeQuote(instruments);
-client.UnsubscribeDepth(instruments);
+using OpenAlgo.NET;
+
+// Initialize OpenAlgo client
+var client = new Api(
+    apiKey: "your_api_key",                  // Replace with your actual OpenAlgo API key
+    host: "http://127.0.0.1:5000",           // REST API host
+    wsUrl: "ws://127.0.0.1:8765"             // WebSocket host
+);
+
+// Instruments list
+var instruments = new List<Instrument>
+{
+    new Instrument { Exchange = "NSE", Symbol = "RELIANCE" },
+    new Instrument { Exchange = "NSE", Symbol = "INFY" }
+};
+
+// Callback for Quote updates
+void OnQuote(QuoteData data)
+{
+    Console.WriteLine("Quote Update Received:");
+    Console.WriteLine(data);
+}
+
+// Connect and subscribe to quote stream
+client.Connect();
+client.SubscribeQuote(instruments, OnQuote);
+
+// Keep the script running to receive data
+try
+{
+    Thread.Sleep(10000);
+}
+finally
+{
+    client.UnsubscribeQuote(instruments);
+    client.Disconnect();
+}
 ```
 
-## Disconnect
+## Depth (Streaming Websocket)
 
 ```csharp
-client.Disconnect();
+using OpenAlgo.NET;
+
+// Initialize OpenAlgo client
+var client = new Api(
+    apiKey: "your_api_key",                  // Replace with your actual OpenAlgo API key
+    host: "http://127.0.0.1:5000",           // REST API host
+    wsUrl: "ws://127.0.0.1:8765"             // WebSocket host
+);
+
+// Instruments list for depth
+var instruments = new List<Instrument>
+{
+    new Instrument { Exchange = "NSE", Symbol = "RELIANCE" },
+    new Instrument { Exchange = "NSE", Symbol = "INFY" }
+};
+
+// Callback for market depth updates
+void OnDepth(DepthData data)
+{
+    Console.WriteLine("Market Depth Update Received:");
+    Console.WriteLine(data);
+}
+
+// Connect and subscribe to depth stream
+client.Connect();
+client.SubscribeDepth(instruments, OnDepth);
+
+// Run for a few seconds to collect data
+try
+{
+    Thread.Sleep(10000);
+}
+finally
+{
+    client.UnsubscribeDepth(instruments);
+    client.Disconnect();
+}
 ```
+
+## WebSocket Methods Summary
+
+| Method | Description |
+|--------|-------------|
+| `Connect()` / `ConnectAsync()` | Connect to WebSocket server |
+| `Disconnect()` / `DisconnectAsync()` | Disconnect from WebSocket server |
+| `SubscribeLtp(instruments, callback)` | Subscribe to LTP updates |
+| `UnsubscribeLtp(instruments)` | Unsubscribe from LTP updates |
+| `SubscribeQuote(instruments, callback)` | Subscribe to Quote updates |
+| `UnsubscribeQuote(instruments)` | Unsubscribe from Quote updates |
+| `SubscribeDepth(instruments, callback)` | Subscribe to Market Depth updates |
+| `UnsubscribeDepth(instruments)` | Unsubscribe from Market Depth updates |
+| `GetLtp(exchange, symbol)` | Get cached LTP data |
+| `GetQuotes(exchange, symbol)` | Get cached Quote data |
+| `GetDepth(exchange, symbol)` | Get cached Depth data |
 
 ---
 
-# Error Handling
+## Error Handling
 
 ```csharp
 var response = client.PlaceOrder(
-    symbol: "RELIANCE",
+    strategy: "Python",
+    symbol: "INVALID",
     action: "BUY",
-    exchange: "NSE"
+    exchange: "NSE",
+    priceType: "MARKET",
+    product: "MIS",
+    quantity: 1
 );
 
-if (response.IsSuccess)
-{
-    Console.WriteLine($"Order placed: {response.OrderId}");
-}
-else
+if (!response.IsSuccess)
 {
     Console.WriteLine($"Error: {response.Message}");
     Console.WriteLine($"Error Type: {response.ErrorType}");
@@ -1455,72 +1879,11 @@ else
 
 ---
 
-# Complete Example
+## License
 
-```csharp
-using OpenAlgo.NET;
-using OpenAlgo.NET.Models.Common;
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-class Program
-{
-    static async Task Main(string[] args)
-    {
-        // Initialize client
-        var client = new Api(
-            apiKey: "your_api_key",
-            verbose: 1
-        );
-
-        // Check funds
-        var funds = await client.FundsAsync();
-        Console.WriteLine($"Available funds: {funds.Data?.AvailableCash}");
-
-        // Get quote
-        var quote = await client.QuotesAsync("RELIANCE", "NSE");
-        Console.WriteLine($"RELIANCE LTP: {quote.Data?.Ltp}");
-
-        // Place order
-        var order = await client.PlaceOrderAsync(
-            symbol: "RELIANCE",
-            action: "BUY",
-            exchange: "NSE",
-            priceType: "MARKET",
-            product: "MIS",
-            quantity: 1
-        );
-
-        if (order.IsSuccess)
-        {
-            Console.WriteLine($"Order placed: {order.OrderId}");
-        }
-
-        // WebSocket streaming
-        if (await client.ConnectAsync())
-        {
-            var instruments = new List<Instrument>
-            {
-                new() { Symbol = "RELIANCE", Exchange = "NSE" }
-            };
-
-            await client.SubscribeLtpAsync(instruments, data =>
-            {
-                Console.WriteLine($"LTP: {data.Price}");
-            });
-
-            await Task.Delay(30000);
-            await client.DisconnectAsync();
-        }
-    }
-}
-```
-
----
-
-# License
-
-MIT License
-
-# Links
+## Links
 
 - [OpenAlgo Platform](https://openalgo.in/)
 - [API Documentation](https://docs.openalgo.in/api-documentation/v1)
