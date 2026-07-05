@@ -73,15 +73,19 @@ public abstract class UtilitiesApi : Options.OptionsApi
     /// <summary>
     /// Get trading holidays for a year (async).
     /// </summary>
-    /// <param name="year">Year to get holidays for. Required.</param>
+    /// <param name="year">Year to get holidays for (2020-2050). Defaults to the current year if not provided.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>Holidays response.</returns>
     public async Task<HolidaysResponse> HolidaysAsync(
-        int year,
+        int? year = null,
         CancellationToken cancellationToken = default)
     {
         var payload = CreatePayload();
-        payload["year"] = year;
+
+        if (year.HasValue)
+        {
+            payload["year"] = year.Value;
+        }
 
         return await MakeRequestAsync<HolidaysResponse>("market/holidays", payload, cancellationToken);
     }
@@ -89,7 +93,7 @@ public abstract class UtilitiesApi : Options.OptionsApi
     /// <summary>
     /// Get trading holidays for a year (sync).
     /// </summary>
-    public HolidaysResponse Holidays(int year)
+    public HolidaysResponse Holidays(int? year = null)
     {
         return HolidaysAsync(year).GetAwaiter().GetResult();
     }
@@ -101,15 +105,15 @@ public abstract class UtilitiesApi : Options.OptionsApi
     /// <summary>
     /// Get exchange timings for a date (async).
     /// </summary>
-    /// <param name="date">Date in YYYY-MM-DD format. Required.</param>
+    /// <param name="date">Date in YYYY-MM-DD format. Defaults to the current date if not provided.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>Timings response.</returns>
     public async Task<TimingsResponse> TimingsAsync(
-        string date,
+        string? date = null,
         CancellationToken cancellationToken = default)
     {
         var payload = CreatePayload();
-        payload["date"] = date;
+        payload["date"] = date ?? DateTime.Now.ToString("yyyy-MM-dd");
 
         return await MakeRequestAsync<TimingsResponse>("market/timings", payload, cancellationToken);
     }
@@ -117,7 +121,7 @@ public abstract class UtilitiesApi : Options.OptionsApi
     /// <summary>
     /// Get exchange timings for a date (sync).
     /// </summary>
-    public TimingsResponse Timings(string date)
+    public TimingsResponse Timings(string? date = null)
     {
         return TimingsAsync(date).GetAwaiter().GetResult();
     }

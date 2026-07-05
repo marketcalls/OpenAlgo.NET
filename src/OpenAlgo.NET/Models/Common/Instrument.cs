@@ -171,6 +171,100 @@ public class OptionLeg
 }
 
 /// <summary>
+/// Smart order parameters, expressed as named/optional properties so every field
+/// (including the required position size) can be set by name in any order — mirroring
+/// the Python SDK's keyword-only
+/// <c>placesmartorder(*, strategy="Python", symbol, action, exchange, price_type="MARKET",
+/// product="MIS", quantity=1, position_size, **kwargs)</c> signature.
+/// </summary>
+public class PlaceSmartOrderRequest
+{
+    /// <summary>
+    /// Trading symbol. Required.
+    /// </summary>
+    [JsonPropertyName("symbol")]
+    public string Symbol { get; set; } = string.Empty;
+
+    /// <summary>
+    /// BUY or SELL. Required.
+    /// </summary>
+    [JsonPropertyName("action")]
+    public string Action { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Exchange code. Required.
+    /// </summary>
+    [JsonPropertyName("exchange")]
+    public string Exchange { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Required target position size. Required (no default, matching Python).
+    /// </summary>
+    [JsonPropertyName("position_size")]
+    public int? PositionSize { get; set; }
+
+    /// <summary>
+    /// The trading strategy name. Defaults to "Python".
+    /// </summary>
+    [JsonPropertyName("strategy")]
+    public string Strategy { get; set; } = "Python";
+
+    /// <summary>
+    /// Type of price. Defaults to "MARKET".
+    /// </summary>
+    [JsonPropertyName("pricetype")]
+    public string PriceType { get; set; } = "MARKET";
+
+    /// <summary>
+    /// Product type. Defaults to "MIS".
+    /// </summary>
+    [JsonPropertyName("product")]
+    public string Product { get; set; } = "MIS";
+
+    /// <summary>
+    /// Quantity to trade. Defaults to 1.
+    /// </summary>
+    [JsonPropertyName("quantity")]
+    public int Quantity { get; set; } = 1;
+
+    /// <summary>
+    /// Required for LIMIT orders.
+    /// </summary>
+    [JsonPropertyName("price")]
+    public string? Price { get; set; }
+
+    /// <summary>
+    /// Required for SL and SL-M orders.
+    /// </summary>
+    [JsonPropertyName("trigger_price")]
+    public string? TriggerPrice { get; set; }
+
+    /// <summary>
+    /// Disclosed quantity.
+    /// </summary>
+    [JsonPropertyName("disclosed_quantity")]
+    public string? DisclosedQuantity { get; set; }
+
+    /// <summary>
+    /// Target price.
+    /// </summary>
+    [JsonPropertyName("target")]
+    public string? Target { get; set; }
+
+    /// <summary>
+    /// Stoploss price.
+    /// </summary>
+    [JsonPropertyName("stoploss")]
+    public string? Stoploss { get; set; }
+
+    /// <summary>
+    /// Trailing stoploss points.
+    /// </summary>
+    [JsonPropertyName("trailing_sl")]
+    public string? TrailingSl { get; set; }
+}
+
+/// <summary>
 /// Position for margin calculation.
 /// </summary>
 public class MarginPosition

@@ -59,11 +59,21 @@ public class DepthLevel
 /// <summary>
 /// Market data feed API methods for OpenAlgo using WebSockets.
 /// </summary>
-public abstract class FeedApi : Utilities.UtilitiesApi
+public abstract class FeedApi : WhatsApp.WhatsAppApi
 {
     private ClientWebSocket? _webSocket;
     private CancellationTokenSource? _cancellationTokenSource;
     private Task? _receiveTask;
+
+    // Auto-reconnect state (private, additive — does not change any existing
+    // public attribute or behaviour).
+    private volatile bool _shuttingDown;
+    private readonly object _reconnectLock = new();
+    private Task? _reconnectTask;
+
+    // Active subscription registry keyed by mode -> (exchange, symbol) -> instrument.
+    // Replayed verbatim after a successful auto-reconnect.
+    private readonly ConcurrentDictionary<int, ConcurrentDictionary<(string Exchange, string Symbol), Instrument>> _activeSubs = new();
 
     /// <summary>
     /// WebSocket port.
@@ -90,6 +100,13 @@ public abstract class FeedApi : Utilities.UtilitiesApi
     /// </summary>
     public bool Authenticated { get; private set; }
 
+    /// <summary>
+    /// If true (default), the SDK transparently reconnects after a drop,
+    /// re-authenticates, and replays all active subscriptions with exponential
+    /// backoff. Set to false to keep manual-reconnect behaviour.
+    /// </summary>
+    public bool AutoReconnect { get; }
+
     // Data storage
     private readonly ConcurrentDictionary<string, LtpData> _ltpData = new();
     private readonly ConcurrentDictionary<string, QuoteData> _quotesData = new();
@@ -114,6 +131,18 @@ public abstract class FeedApi : Utilities.UtilitiesApi
     /// <summary>
     /// Initializes a new instance of the FeedApi class.
     /// </summary>
+    /// <param name="apiKey">User's API key.</param>
+    /// <param name="host">Base URL for the API endpoints. Defaults to localhost.</param>
+    /// <param name="version">API version. Defaults to "v1".</param>
+    /// <param name="timeout">Request timeout in seconds.</param>
+    /// <param name="wsPort">WebSocket server port. Defaults to 8765.</param>
+    /// <param name="wsUrl">Custom WebSocket URL. If provided, this overrides host and wsPort settings.</param>
+    /// <param name="verbose">Logging verbosity level (0=silent, 1=basic, 2=debug).</param>
+    /// <param name="autoReconnect">
+    /// If true (default), transparently reconnects after a drop, re-authenticates,
+    /// and replays all active subscriptions with exponential backoff. Set to false
+    /// to keep the previous manual-reconnect behaviour.
+    /// </param>
     protected FeedApi(
         string apiKey,
         string host = "http://127.0.0.1:5000",
@@ -121,11 +150,16 @@ public abstract class FeedApi : Utilities.UtilitiesApi
         double timeout = 120.0,
         int wsPort = 8765,
         string? wsUrl = null,
-        int verbose = 0)
+        int verbose = 0,
+        bool autoReconnect = true)
         : base(apiKey, host, version, timeout)
     {
         WsPort = wsPort;
         Verbose = verbose;
+        AutoReconnect = autoReconnect;
+        _activeSubs[1] = new ConcurrentDictionary<(string, string), Instrument>();
+        _activeSubs[2] = new ConcurrentDictionary<(string, string), Instrument>();
+        _activeSubs[3] = new ConcurrentDictionary<(string, string), Instrument>();
 
         if (!string.IsNullOrEmpty(wsUrl))
         {
@@ -161,7 +195,30 @@ public abstract class FeedApi : Utilities.UtilitiesApi
     /// </summary>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>True if connection and authentication are successful.</returns>
+    /// <remarks>
+    /// A user-initiated connect resets the shutdown flag so auto-reconnect is
+    /// armed (mirrors <c>disconnect()</c> setting a shutdown flag to suppress it).
+    /// </remarks>
     public async Task<bool> ConnectAsync(CancellationToken cancellationToken = default)
+    {
+        _shuttingDown = false;
+        return await DoConnectAsync(cancellationToken);
+    }
+
+    /// <summary>
+    /// Connect to the WebSocket server and authenticate (sync).
+    /// </summary>
+    public bool Connect()
+    {
+        return ConnectAsync().GetAwaiter().GetResult();
+    }
+
+    /// <summary>
+    /// Internal: open one WebSocket connection, start the read loop, and wait
+    /// for authentication. Used by both <see cref="ConnectAsync"/> and the
+    /// reconnect loop. Public surface (Connected/Authenticated) is unchanged.
+    /// </summary>
+    private async Task<bool> DoConnectAsync(CancellationToken cancellationToken = default)
     {
         try
         {
@@ -195,14 +252,6 @@ public abstract class FeedApi : Utilities.UtilitiesApi
         }
     }
 
-    /// <summary>
-    /// Connect to the WebSocket server and authenticate (sync).
-    /// </summary>
-    public bool Connect()
-    {
-        return ConnectAsync().GetAwaiter().GetResult();
-    }
-
     #endregion
 
     #region Disconnect
@@ -212,6 +261,9 @@ public abstract class FeedApi : Utilities.UtilitiesApi
     /// </summary>
     public async Task DisconnectAsync()
     {
+        // Mark a graceful shutdown so the receive loop's auto-reconnect does not fire.
+        _shuttingDown = true;
+
         if (_webSocket != null)
         {
             try
@@ -243,6 +295,104 @@ public abstract class FeedApi : Utilities.UtilitiesApi
     public void Disconnect()
     {
         DisconnectAsync().GetAwaiter().GetResult();
+    }
+
+    #endregion
+
+    #region Auto-Reconnect
+
+    /// <summary>
+    /// Spawn the reconnect loop if one is not already running. Called when the
+    /// receive loop ends unexpectedly. No-op when auto-reconnect is disabled or
+    /// the user has called <see cref="DisconnectAsync"/>.
+    /// </summary>
+    private void ScheduleReconnect()
+    {
+        lock (_reconnectLock)
+        {
+            if (_shuttingDown || !AutoReconnect)
+            {
+                return;
+            }
+
+            if (_reconnectTask != null && !_reconnectTask.IsCompleted)
+            {
+                return;
+            }
+
+            _reconnectTask = Task.Run(ReconnectLoopAsync);
+        }
+    }
+
+    /// <summary>
+    /// Reconnect with exponential backoff, then replay every active
+    /// subscription. Stops when the user calls <see cref="DisconnectAsync"/> or
+    /// a connection is fully re-authenticated.
+    /// </summary>
+    private async Task ReconnectLoopAsync()
+    {
+        // Exponential backoff schedule (seconds), capped at 60s.
+        int[] backoffs = { 1, 2, 5, 10, 30, 60 };
+        var attempt = 0;
+
+        while (!_shuttingDown && !Authenticated)
+        {
+            var delay = backoffs[Math.Min(attempt, backoffs.Length - 1)];
+            Log(1, "WS", $"Reconnect attempt {attempt + 1} in {delay}s...");
+
+            // Sleep in small slices so a disconnect() is responsive.
+            var sleptMs = 0;
+            var delayMs = delay * 1000;
+            while (sleptMs < delayMs && !_shuttingDown)
+            {
+                await Task.Delay(200);
+                sleptMs += 200;
+            }
+
+            if (_shuttingDown)
+            {
+                return;
+            }
+
+            try
+            {
+                var ok = await DoConnectAsync();
+                if (ok)
+                {
+                    Log(1, "WS", "Reconnected and re-authenticated.");
+                    await ReplaySubscriptionsAsync();
+                    return;
+                }
+            }
+            catch (Exception ex)
+            {
+                Log(1, "ERROR", $"Reconnect attempt {attempt + 1} failed: {ex.Message}");
+            }
+
+            attempt++;
+        }
+    }
+
+    /// <summary>
+    /// Re-issue every previously active subscription. Called once after a
+    /// successful reconnect+authenticate. Existing OnLtpReceived / OnQuoteReceived
+    /// / OnDepthReceived event subscribers are preserved across reconnects, so
+    /// callbacks resume firing without any extra plumbing.
+    /// </summary>
+    private async Task ReplaySubscriptionsAsync()
+    {
+        foreach (var (mode, store) in _activeSubs)
+        {
+            if (store.IsEmpty)
+            {
+                continue;
+            }
+
+            var instruments = store.Values.ToList();
+            var modeName = mode switch { 1 => "LTP", 2 => "Quote", 3 => "Depth", _ => mode.ToString() };
+            Log(1, "SUB", $"Replaying {instruments.Count} {modeName} subscription(s) after reconnect");
+            await SubscribeAsync(instruments, mode, CancellationToken.None);
+        }
     }
 
     #endregion
@@ -290,6 +440,25 @@ public abstract class FeedApi : Utilities.UtilitiesApi
         catch (Exception ex)
         {
             Log(1, "ERROR", $"WebSocket receive error: {ex.Message}");
+        }
+        finally
+        {
+            var wasConnected = Connected;
+            Connected = false;
+            Authenticated = false;
+
+            if (wasConnected)
+            {
+                Log(1, "WS", $"Disconnected from {WsUrl}");
+            }
+
+            // Schedule auto-reconnect unless the user called DisconnectAsync() or
+            // auto-reconnect is disabled. Any registered subscriptions will be
+            // replayed once the new connection authenticates.
+            if (AutoReconnect && !_shuttingDown)
+            {
+                ScheduleReconnect();
+            }
         }
     }
 
@@ -493,6 +662,14 @@ public abstract class FeedApi : Utilities.UtilitiesApi
             try
             {
                 await _webSocket!.SendAsync(new ArraySegment<byte>(bytes), WebSocketMessageType.Text, true, cancellationToken);
+
+                // Register in the active-subscription store so it can be replayed
+                // after an auto-reconnect.
+                if (_activeSubs.TryGetValue(mode, out var store))
+                {
+                    store[(instrument.Exchange, instrument.Symbol)] = instrument;
+                }
+
                 await Task.Delay(100, cancellationToken);
             }
             catch (Exception ex)
@@ -531,6 +708,12 @@ public abstract class FeedApi : Utilities.UtilitiesApi
             try
             {
                 await _webSocket!.SendAsync(new ArraySegment<byte>(bytes), WebSocketMessageType.Text, true, cancellationToken);
+
+                // Drop from the active-subscription store so a reconnect does not replay it.
+                if (_activeSubs.TryGetValue(mode, out var store))
+                {
+                    store.TryRemove((instrument.Exchange, instrument.Symbol), out _);
+                }
 
                 var symbolKey = $"{instrument.Exchange}:{instrument.Symbol}";
                 switch (mode)

@@ -130,6 +130,38 @@ Status: success
 OrderId: 250408000997543
 ```
 
+You can also pass a `PlaceSmartOrderRequest` object, which lets every field —
+including the required `PositionSize` — be set by name in any order, mirroring
+the Python SDK's keyword-only `placesmartorder(*, strategy="Python", symbol,
+action, exchange, price_type="MARKET", product="MIS", quantity=1,
+position_size, **kwargs)` calling style:
+
+```csharp
+var response = client.PlaceSmartOrder(new PlaceSmartOrderRequest
+{
+    Symbol = "TATAMOTORS",
+    Action = "SELL",
+    Exchange = "NSE",
+    PositionSize = 5,
+    // Strategy, PriceType, Product and Quantity all default to
+    // "Python", "MARKET", "MIS" and 1 respectively, same as the Python SDK.
+});
+Console.WriteLine($"Status: {response.Status}");
+Console.WriteLine($"OrderId: {response.OrderId}");
+```
+
+Async version:
+
+```csharp
+var response = await client.PlaceSmartOrderAsync(new PlaceSmartOrderRequest
+{
+    Symbol = "TATAMOTORS",
+    Action = "SELL",
+    Exchange = "NSE",
+    PositionSize = 5
+});
+```
+
 ## OptionsOrder Example
 
 To place ATM options order
@@ -710,6 +742,25 @@ Timestamp                    Open       High        Low      Close       Volume
 2025-12-20 09:35:00       827.70     828.50     827.00     828.15        98234
 ```
 
+`History()` also accepts an optional `source` parameter (defaults to `"api"`):
+- `"api"` (default): fetches directly from the broker API.
+- `"db"`: fetches from the OpenAlgo DuckDB/Historify database, which stores `1m`
+  and `D` intervals physically and computes all other intervals on-the-fly via
+  SQL aggregation. Custom intraday intervals (`2m`, `3m`, `4m`, `6m`, `7m`, `2h`,
+  `3h`, `4h`, etc.) and daily-based intervals (`W`, `M`, `Q`, `Y` with multiples
+  like `2W`, `3M`) are only available with `source: "db"`.
+
+```csharp
+var dbResponse = client.History(
+    symbol: "SBIN",
+    exchange: "NSE",
+    interval: "2h",
+    startDate: "2025-12-01",
+    endDate: "2025-12-22",
+    source: "db"
+);
+```
+
 ## Intervals Example
 
 ```csharp
@@ -730,6 +781,18 @@ Status: success
 Days: D
 Hours: 1h
 Minutes: 10m, 15m, 1m, 30m, 3m, 5m
+```
+
+`Interval()` / `IntervalAsync()` is a legacy alias for `Intervals()` / `IntervalsAsync()`,
+kept for backward compatibility with older scripts. Same request, same response shape:
+
+```csharp
+var response = client.Interval();
+Console.WriteLine($"Status: {response.Status}");
+
+// Async version
+var asyncResponse = await client.IntervalAsync();
+Console.WriteLine($"Status: {asyncResponse.Status}");
 ```
 
 ## OptionChain Example
@@ -1088,6 +1151,55 @@ Status: success
 Message: Notification sent successfully
 ```
 
+## WhatsApp Alert Example
+
+Send a WhatsApp message via the OpenAlgo paired device. The device must already be
+paired from the `/whatsapp` admin page in the OpenAlgo web UI.
+
+```csharp
+// Send to self (paired device's own number) - simplest case
+var response = client.WhatsApp(message: "Build #482 deployed. P&L: +1.2%");
+Console.WriteLine($"Status: {response.Status}");
+Console.WriteLine($"Message: {response.Message}");
+
+// Send to a single number
+var response2 = client.WhatsApp(
+    message: "Stop-loss hit on BANKNIFTY!",
+    to: "919876543210"
+);
+
+// Small broadcast (up to 5 numbers)
+var response3 = client.WhatsApp(
+    message: "Server maintenance in 10 minutes",
+    toMany: new List<string> { "919876543210", "919812345678", "919900112233" }
+);
+
+// Send a chart image with a caption
+var response4 = client.WhatsApp(
+    message: "NIFTY end-of-day chart",
+    to: "919876543210",
+    image: "/srv/charts/nifty_eod.png"
+);
+
+// Fire-and-forget (skip waiting for the delivery report)
+var response5 = client.WhatsApp(
+    message: "Time-critical alert",
+    waitForDelivery: false
+);
+```
+
+**WhatsApp Alert Response**
+
+```
+Status: success
+Message: Delivered to 1, failed 0
+```
+
+Recipient precedence (specify at most one — defaults to `self` if none): `username` >
+`toMany` (max 5, broadcast) > `to` (single) > self. Image/document paths are read
+from the OpenAlgo server's filesystem (under `WHATSAPP_ATTACHMENT_ROOTS`), not
+uploaded by the call.
+
 ## Funds Example
 
 ```csharp
@@ -1280,6 +1392,14 @@ Statistics:
 
 ## Holidays Example
 
+The `year` parameter is optional and defaults to the current year if omitted:
+
+```csharp
+// Defaults to the current year
+var currentYear = client.Holidays();
+Console.WriteLine($"Status: {currentYear.Status}");
+```
+
 ```csharp
 var response = client.Holidays(year: 2025);
 Console.WriteLine($"Status: {response.Status}");
@@ -1311,6 +1431,14 @@ Date         Description                         Type
 ```
 
 ## Timings Example
+
+The `date` parameter is optional and defaults to today's date (`yyyy-MM-dd`) if omitted:
+
+```csharp
+// Defaults to today's date
+var today = client.Timings();
+Console.WriteLine($"Status: {today.Status}");
+```
 
 ```csharp
 var response = client.Timings(date: "2025-12-19");
@@ -1439,6 +1567,7 @@ var funds = await client.FundsAsync(cts.Token);
 | `Depth()` | `DepthAsync()` |
 | `History()` | `HistoryAsync()` |
 | `Intervals()` | `IntervalsAsync()` |
+| `Interval()` | `IntervalAsync()` |
 | `OptionChain()` | `OptionChainAsync()` |
 | `Symbol()` | `SymbolAsync()` |
 | `Search()` | `SearchAsync()` |
@@ -1448,6 +1577,7 @@ var funds = await client.FundsAsync(cts.Token);
 | `Expiry()` | `ExpiryAsync()` |
 | `Instruments()` | `InstrumentsAsync()` |
 | `Telegram()` | `TelegramAsync()` |
+| `WhatsApp()` | `WhatsAppAsync()` |
 | `Funds()` | `FundsAsync()` |
 | `Margin()` | `MarginAsync()` |
 | `OrderBook()` | `OrderBookAsync()` |
@@ -1462,6 +1592,25 @@ var funds = await client.FundsAsync(cts.Token);
 ---
 
 # WebSocket Streaming
+
+## Auto-Reconnect
+
+By default (`autoReconnect: true`), the WebSocket feed transparently reconnects
+after a drop, re-authenticates, and replays every active LTP/Quote/Depth
+subscription with exponential backoff (1s, 2s, 5s, 10s, 30s, capped at 60s).
+Your existing callbacks (passed to `SubscribeLtp`/`SubscribeQuote`/`SubscribeDepth`)
+keep firing after a reconnect with no extra code required.
+
+```csharp
+// Auto-reconnect is on by default
+var client = new Api(apiKey: "your_api_key", host: "http://127.0.0.1:5000");
+
+// Disable auto-reconnect to keep the previous manual-reconnect behaviour
+var manualClient = new Api(apiKey: "your_api_key", autoReconnect: false);
+```
+
+Calling `Disconnect()` / `DisconnectAsync()` always stops auto-reconnect for
+that session; calling `Connect()` / `ConnectAsync()` again re-arms it.
 
 ## LTP Data (Streaming Websocket)
 
@@ -1747,9 +1896,10 @@ if (!response.IsSuccess)
 
 | Sync Method | Async Method | Description |
 |-------------|--------------|-------------|
-| `Holidays()` | `HolidaysAsync()` | Get trading holidays for a year |
-| `Timings()` | `TimingsAsync()` | Get exchange timings for a date |
+| `Holidays()` | `HolidaysAsync()` | Get trading holidays for a year (defaults to current year) |
+| `Timings()` | `TimingsAsync()` | Get exchange timings for a date (defaults to today) |
 | `Telegram()` | `TelegramAsync()` | Send Telegram alert message |
+| `WhatsApp()` | `WhatsAppAsync()` | Send WhatsApp alert message (text/image/document) |
 | `AnalyzerStatus()` | `AnalyzerStatusAsync()` | Get analyzer mode status |
 | `AnalyzerToggle()` | `AnalyzerToggleAsync()` | Toggle analyze/live mode |
 
@@ -1757,7 +1907,7 @@ if (!response.IsSuccess)
 
 | Sync Method | Async Method | Description |
 |-------------|--------------|-------------|
-| `Connect()` | `ConnectAsync()` | Connect to WebSocket server |
+| `Connect()` | `ConnectAsync()` | Connect to WebSocket server (auto-reconnects by default) |
 | `Disconnect()` | `DisconnectAsync()` | Disconnect from WebSocket |
 | `SubscribeLtp()` | `SubscribeLtpAsync()` | Subscribe to LTP updates |
 | `UnsubscribeLtp()` | `UnsubscribeLtpAsync()` | Unsubscribe from LTP |
@@ -1768,6 +1918,47 @@ if (!response.IsSuccess)
 | `GetLtp()` | - | Get cached LTP data |
 | `GetQuotes()` | - | Get cached Quote data |
 | `GetDepth()` | - | Get cached Depth data |
+
+### Strategy Webhook (standalone)
+
+| Sync Method | Async Method | Description |
+|-------------|--------------|-------------|
+| `StrategyOrder()` | `StrategyOrderAsync()` | Post a strategy signal to a TradingView-style OpenAlgo webhook |
+
+---
+
+## Strategy Webhook Example
+
+`Strategy` is a standalone class (not part of `Api`) for posting TradingView-style
+webhook signals directly to an OpenAlgo strategy — it does not use the `/api/v1/`
+REST surface or an API key. The strategy mode (LONG_ONLY, SHORT_ONLY, BOTH) is
+configured on the OpenAlgo "Strategies" page, not in this client.
+
+```csharp
+using OpenAlgo.NET;
+
+using var strategy = new Strategy(hostUrl: "http://127.0.0.1:5000", webhookId: "your-webhook-id");
+
+// LONG_ONLY / SHORT_ONLY mode
+var response = strategy.StrategyOrder(symbol: "RELIANCE", action: "BUY");
+
+// BOTH mode requires positionSize
+var response2 = strategy.StrategyOrder(symbol: "RELIANCE", action: "SELL", positionSize: 0);
+
+Console.WriteLine(response.GetRawText());
+```
+
+Async version:
+
+```csharp
+using var strategy = new Strategy(hostUrl: "http://127.0.0.1:5000", webhookId: "your-webhook-id");
+var response = await strategy.StrategyOrderAsync(symbol: "NIFTY", action: "BUY", positionSize: 1);
+```
+
+`StrategyOrderAsync` / `StrategyOrder` return the webhook's raw JSON response as a
+`System.Text.Json.JsonElement` and throw `HttpRequestException` if the webhook
+call fails or returns a non-success status code (mirroring the Python SDK's
+`requests.exceptions.RequestException`).
 
 ---
 

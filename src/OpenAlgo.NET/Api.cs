@@ -43,6 +43,10 @@ public sealed class Api : Feed.FeedApi
     /// <param name="wsPort">WebSocket port. Defaults to 8765.</param>
     /// <param name="wsUrl">Custom WebSocket URL. Optional, auto-generated from host if not specified.</param>
     /// <param name="verbose">Verbosity level (0=silent, 1=basic, 2=debug). Defaults to 0.</param>
+    /// <param name="autoReconnect">
+    /// If true (default), the WebSocket feed transparently reconnects after a drop,
+    /// re-authenticates, and replays all active subscriptions with exponential backoff.
+    /// </param>
     /// <example>
     /// <code>
     /// // Basic initialization
@@ -66,8 +70,9 @@ public sealed class Api : Feed.FeedApi
         double timeout = 120.0,
         int wsPort = 8765,
         string? wsUrl = null,
-        int verbose = 0)
-        : base(apiKey, host, version, timeout, wsPort, wsUrl, verbose)
+        int verbose = 0,
+        bool autoReconnect = true)
+        : base(apiKey, host, version, timeout, wsPort, wsUrl, verbose, autoReconnect)
     {
     }
 }

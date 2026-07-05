@@ -120,6 +120,13 @@ public abstract class DataApi : Orders.OrderApi
     /// <param name="interval">Time interval for the data. Required.</param>
     /// <param name="startDate">Start date in format 'YYYY-MM-DD'. Required.</param>
     /// <param name="endDate">End date in format 'YYYY-MM-DD'. Required.</param>
+    /// <param name="source">
+    /// Data source. "api" (default) fetches from the broker API. "db" fetches from the
+    /// OpenAlgo DuckDB/Historify database, which stores 1m and D intervals physically and
+    /// computes all other intervals on-the-fly via SQL aggregation. Custom intraday
+    /// intervals (2m, 3m, 4m, 6m, 7m, 2h, 3h, 4h, etc.) and daily-based intervals
+    /// (W, M, Q, Y with multiples like 2W, 3M) are only available with source="db".
+    /// </param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>History response.</returns>
     public async Task<HistoryResponse> HistoryAsync(
@@ -128,6 +135,7 @@ public abstract class DataApi : Orders.OrderApi
         string interval,
         string startDate,
         string endDate,
+        string source = "api",
         CancellationToken cancellationToken = default)
     {
         var payload = CreatePayload();
@@ -136,6 +144,7 @@ public abstract class DataApi : Orders.OrderApi
         payload["interval"] = interval;
         payload["start_date"] = startDate;
         payload["end_date"] = endDate;
+        payload["source"] = source;
 
         return await MakeRequestAsync<HistoryResponse>("history", payload, cancellationToken);
     }
@@ -148,9 +157,10 @@ public abstract class DataApi : Orders.OrderApi
         string exchange,
         string interval,
         string startDate,
-        string endDate)
+        string endDate,
+        string source = "api")
     {
-        return HistoryAsync(symbol, exchange, interval, startDate, endDate).GetAwaiter().GetResult();
+        return HistoryAsync(symbol, exchange, interval, startDate, endDate, source).GetAwaiter().GetResult();
     }
 
     #endregion
@@ -174,6 +184,24 @@ public abstract class DataApi : Orders.OrderApi
     public IntervalsResponse Intervals()
     {
         return IntervalsAsync().GetAwaiter().GetResult();
+    }
+
+    /// <summary>
+    /// Legacy alias for <see cref="IntervalsAsync"/>. Use <see cref="IntervalsAsync"/> instead (async).
+    /// </summary>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>Intervals response.</returns>
+    public async Task<IntervalsResponse> IntervalAsync(CancellationToken cancellationToken = default)
+    {
+        return await IntervalsAsync(cancellationToken);
+    }
+
+    /// <summary>
+    /// Legacy alias for <see cref="Intervals"/>. Use <see cref="Intervals"/> instead (sync).
+    /// </summary>
+    public IntervalsResponse Interval()
+    {
+        return IntervalAsync().GetAwaiter().GetResult();
     }
 
     #endregion

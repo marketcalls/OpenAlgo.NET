@@ -176,6 +176,60 @@ public abstract class OrderApi : BaseApi
             quantity, price, triggerPrice, disclosedQuantity, target, stoploss, trailingSl).GetAwaiter().GetResult();
     }
 
+    /// <summary>
+    /// Place a smart order using a request object so every field — including the
+    /// required position size — can be set by name in any order (async). Mirrors the
+    /// Python SDK's keyword-only
+    /// <c>placesmartorder(*, strategy="Python", symbol, action, exchange, price_type="MARKET",
+    /// product="MIS", quantity=1, position_size, **kwargs)</c> calling style.
+    /// </summary>
+    /// <param name="request">
+    /// Smart order parameters. <see cref="PlaceSmartOrderRequest.Symbol"/>,
+    /// <see cref="PlaceSmartOrderRequest.Action"/>, <see cref="PlaceSmartOrderRequest.Exchange"/>,
+    /// and <see cref="PlaceSmartOrderRequest.PositionSize"/> are required; everything else has a
+    /// default matching the Python SDK.
+    /// </param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>Order response.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="request"/> is null.</exception>
+    /// <exception cref="ArgumentException">Thrown when a required field is missing from <paramref name="request"/>.</exception>
+    public async Task<OrderResponse> PlaceSmartOrderAsync(
+        PlaceSmartOrderRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        if (request is null) throw new ArgumentNullException(nameof(request));
+        if (string.IsNullOrEmpty(request.Symbol)) throw new ArgumentException("Symbol is required.", nameof(request));
+        if (string.IsNullOrEmpty(request.Action)) throw new ArgumentException("Action is required.", nameof(request));
+        if (string.IsNullOrEmpty(request.Exchange)) throw new ArgumentException("Exchange is required.", nameof(request));
+        if (!request.PositionSize.HasValue) throw new ArgumentException("PositionSize is required.", nameof(request));
+
+        return await PlaceSmartOrderAsync(
+            request.Symbol,
+            request.Action,
+            request.Exchange,
+            request.PositionSize.Value,
+            request.Strategy,
+            request.PriceType,
+            request.Product,
+            request.Quantity,
+            request.Price,
+            request.TriggerPrice,
+            request.DisclosedQuantity,
+            request.Target,
+            request.Stoploss,
+            request.TrailingSl,
+            cancellationToken);
+    }
+
+    /// <summary>
+    /// Place a smart order using a request object so every field — including the
+    /// required position size — can be set by name in any order (sync).
+    /// </summary>
+    public OrderResponse PlaceSmartOrder(PlaceSmartOrderRequest request)
+    {
+        return PlaceSmartOrderAsync(request).GetAwaiter().GetResult();
+    }
+
     #endregion
 
     #region BasketOrder
